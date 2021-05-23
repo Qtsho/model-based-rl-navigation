@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+
+<launch>
+     <arg name="rviz" default="true" />
+     <arg name="plot" default="false" />
+      <arg name="turtleamcl" default="true" />
+    <arg name="plot_states" default="false" />
+    <!--  ************** Global Parameters ***************  -->
+    <param name="use_sim_time" value="true"/>
+    <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+    <arg name="tf_prefix"  default=""/> 
+
+    <!--  ************** GAZEBO Simulator ***************  -->
+    <arg name="x_pos" default="-0.7"/>
+    <arg name="y_pos" default="0.0"/>
+    <arg name="z_pos" default="0.0"/>
+    <!--  ************** Robot model ***************  -->
+
+
+    <!--  ************** Map **************  -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find turtlebot3_2dnav)/maps/stage4.yaml" output="screen">
+        <param name="frame_id" value="map"/>
+    </node>
+
+
+    <!--  ************** Localization **************  -->
+    
+    <node pkg="amcl" type="amcl" name="amcl" output="screen" unless="$(arg turtleamcl)">
+        <rosparam file="$(find mpc_local_planner_examples)/cfg/amcl_params.yaml" command="load" />
+        <param name="initial_pose_x"            value="$(arg x_pos)"/>
+        <param name="initial_pose_y"            value="$(arg y_pos)"/>
+        <param name="initial_pose_a"            value="$(arg yaw)"/>
+    </node>
+
+    <include file="$(find turtlebot3_2dnav)/launch/amcl.launch" if="$(arg turtleamcl)" >
+  </include>  
+
+
+    <!--  ************** Navigation ***************  -->    
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find turtlebot3_2dnav)/param/costmap_common_params_burger.yaml" command="load" ns="global_costmap" />
+      <rosparam file="$(find turtlebot3_2dnav)/param/costmap_common_params_burger.yaml" command="load" ns="local_costmap" />
+      <rosparam file="$(find turtlebot3_2dnav)/param/local_costmap_params.yaml" command="load" />
+      <rosparam file="$(find turtlebot3_2dnav)/param/global_costmap_params.yaml" command="load" />
+      <rosparam file="$(find mpc_local_planner_examples)/cfg/diff_drive/mpc_local_planner_params_quadratic_form.yaml" command="load" />
+
+    <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+    <param name="planner_frequency" value="1.0" />
+    <param name="planner_patience" value="5.0" />
+
+    <param name="base_local_planner" value="mpc_local_planner/MpcLocalPlannerROS" />
+    <param name="controller_frequency" value="5.0" />
+    <param name="controller_patience" value="15.0" />
+
+                
+                <param name="MpcLocalPlannerROS/controller/publish_ocp_results" value="true" if="$(arg plot)" />
+  </node>
+
+
+    <!--  ************** Visualisation **************  -->
+   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot3_2dnav)/rviz/rviz.rviz" if="$(arg rviz)"/>
+</launch>
