@@ -4,4 +4,4 @@ Dependencies:
   ros-rl-env
  
  
- under develope
+ under developed
