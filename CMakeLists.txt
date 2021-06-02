@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  actionlib
+  move_base_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -204,3 +206,13 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+# sending goal node
+
+add_executable(simple_navigation_goals src/sendGoal.cpp)
+target_link_libraries(simple_navigation_goals ${catkin_LIBRARIES})
+
+#  navigation with RL_Node
+ADD_EXECUTABLE( rl_nav src/localPath.cpp )
+TARGET_LINK_LIBRARIES(rl_nav ipopt ${catkin_LIBRARIES} )
+

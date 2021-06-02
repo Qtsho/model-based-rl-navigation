@@ -11,7 +11,7 @@
     <arg name="tf_prefix"  default=""/> 
 
     <!--  ************** GAZEBO Simulator ***************  -->
-    <arg name="x_pos" default="-0.7"/>
+    <arg name="x_pos" default="-1"/>
     <arg name="y_pos" default="0.0"/>
     <arg name="z_pos" default="0.0"/>
     <!--  ************** Robot model ***************  -->

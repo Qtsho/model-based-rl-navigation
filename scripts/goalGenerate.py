@@ -20,20 +20,13 @@ class Respawn():
     def __init__(self):
         #goal box model
         self.modelPath = os.path.dirname(os.path.realpath(__file__))
-        self.modelPath = self.modelPath.replace('/home/tien/thesis_catkin_ws/src/rl_move_base/scripts',
-                                                '/home/tien/simulation_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_square/goal_box/model.sdf')
+        self.modelPath = self.modelPath.replace('/home/workstation/thesis_ws/src/rl_move_base/scripts',
+                                                '/home/workstation/thesis_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_square/goal_box/model.sdf')
 
-        while True:
-            try:
-                self.f = open(self.modelPath, 'r')
-            except OSError:
-                print('cannot open', self.modelPath)
-                sys.exit()
-                
-
-        self.model = self.f.read()
-        self.stage = rospy.get_param('/stage_number')
+        
+        self.stage = 4
         self.goal_position = Pose()
+        self.goal = MoveBaseGoal()
         self.init_goal_x = 0.6
         self.init_goal_y = 0.0
         self.goal_position.position.x = self.init_goal_x
@@ -50,40 +43,20 @@ class Respawn():
         self.last_index = 0
         self.sub_model = rospy.Subscriber('gazebo/model_states', ModelStates, self.checkModel)
         # Create an action client called "move_base" with action definition file "MoveBaseAction"
-        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.actionClient = actionlib.SimpleActionClient('move_base',MoveBaseAction)
 
         self.check_model = False
         self.index = 0
-        print ('ha')
+       
 
-        
-    #Pub MoveBase goal
-    def publishGoal (self):
-        print('Hell2')
-        print ('Start generating Goal')
-        # Waits until the action server has started up and started listening for goals.
-        self.client.wait_for_server()
-        # Creates a new goal with the MoveBaseGoal constructor
-        goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = "map"
-        goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position.x = self.goal_position.position.x
-        goal.target_pose.pose.position.x = self.goal_position.position.y
-        goal.target_pose.pose.orientation.w = 1 # no rotation
-
-             # Sends the goal to the action server.
-        self.client.send_goal(goal)
-
-            # Waits for the server to finish performing the action.
-        wait = self.client.wait_for_result()
-        rospy.logerr("Waiting for result")
-            # If the result doesn't arrive, assume the Server is not available
-        if not wait:
-            rospy.logerr("Action server not available!")
-            rospy.signal_shutdown("Action server not available!")
-        else:
-                # Result of executing the action
-            return self.client.get_result()
+        while True:
+            try:
+                self.f = open(self.modelPath, 'r')
+                break
+            except OSError:
+                print('cannot open', self.modelPath)
+                
+        self.model = self.f.read()
 
     def checkModel(self, model):
         self.check_model = False
@@ -112,9 +85,8 @@ class Respawn():
                 break
             else:
                 pass
-
+    
     def getPosition(self, position_check=False, delete=False):
-        print('Hell')
         if delete:
             self.deleteModel()
 
@@ -162,22 +134,53 @@ class Respawn():
 
         self.last_goal_x = self.goal_position.position.x
         self.last_goal_y = self.goal_position.position.y
+        
+        self.goal.target_pose.header.frame_id = "map"
+        self.goal.target_pose.header.stamp = rospy.Time.now()
+        self.goal.target_pose.pose.position.x = self.goal_position.position.x
+        self.goal.target_pose.pose.position.y = self.goal_position.position.y
+        self.goal.target_pose.pose.orientation.w = 1
 
-        return self.goal_position.position.x, self.goal_position.position.y
+        #return self.goal_position.position.x, self.goal_position.position.y
+        return self.goal
+
+    def sendAction(self):
+
+        while not self.actionClient.wait_for_server():
+            print ("Waiting for movebase")
+        #we'll send a goal to the robot 
+       
+        self.actionClient.send_goal(self.getPosition(position_check=True, delete=True))
+        wait = self.actionClient.wait_for_result()
+
+        if not wait:
+            rospy.logerr("Action server not available!")
+            rospy.signal_shutdown("Action server not available!")# turn off signal
+        else: 
+            state = self.actionClient.get_state()
+
+        if state == 3:
+            print ('Goal Reach!!') #TODO check goal reach?
+            self.actionClient.send_goal(self.getPosition(position_check=True, delete=True))
+            return
+        else:
+            print('Failed!, sending another goal')
+            self.actionClient.send_goal(self.getPosition(position_check=True, delete=True))
+            return
+        
 
 if __name__ == '__main__':
     try:
-        rospy.init_node ('move_base_client')
-        goalRespawn = Respawn()
-        goalRespawn.getPosition()
-
-        result = goalRespawn.publishGoal()
-        rospy.spin()
-    
-        if result:
-            rospy.loginfo("Goal execution done!")
-            goalRespawn.getPosition(True, delete=True)
-    except rospy.ROSInterruptException:
-        pass
-
         
+        rospy.init_node('goalPub', anonymous=True)
+        
+
+        respawn_goal = Respawn()
+        while True:     
+            respawn_goal.sendAction()
+            # 
+
+        #rospy.spin()      # if has callback will call as fast as possible     
+
+    except rospy.ROSInterruptException:
+        rospy.loginfo("Closing node")       
