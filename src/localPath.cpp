@@ -11,6 +11,9 @@
 #include <geometry_msgs/Twist.h>
 #include <tf/transform_listener.h>
 //class template
+//adapted from  MPC-ROS
+//get part of global path that the robot want to follows, then down sampling it and then send as subgoals
+//status: developed.
 class RLNavNode{
 
     public:
@@ -71,11 +74,12 @@ RLNavNode::RLNavNode(){
     _pub_odompath  = _nh.advertise<nav_msgs::Path>("/rlgoal_reference", 1); // reference path for rl agent  
 };
 
-// Public: return _thread_numbers
+// Public: return _thread_numbers, encapsualte thread number variable.
 int RLNavNode::get_thread_numbers()
 {
     return _thread_numbers;
 }
+
 // Callback: update goal status when receive goal topics
 void RLNavNode::goalCB(const geometry_msgs::PoseStamped::ConstPtr &goalMsg)
 {
@@ -86,7 +90,7 @@ void RLNavNode::goalCB(const geometry_msgs::PoseStamped::ConstPtr &goalMsg)
 
 }
 // CallBack: Update path waypoints (conversion to odom frame) when receive global_plan
-void RLNavNode::pathCB(const nav_msgs::Path::ConstPtr &pathMsg) //pathMsg is a pointer
+void RLNavNode::pathCB(const nav_msgs::Path::ConstPtr &pathMsg) //pathMsg is a pointer, avoid doing copy.
 {
     
     if (_goal_received && !_goal_reached) //check if reach goal
@@ -102,24 +106,25 @@ void RLNavNode::pathCB(const nav_msgs::Path::ConstPtr &pathMsg) //pathMsg is a p
             if (_waypointsDist <= 0.0)
             {
                 double dx = pathMsg->poses[1].pose.position.x - pathMsg->poses[0].pose.position.x; // different in x
-                double dy = pathMsg->poses[1].pose.position.y - pathMsg->poses[0].pose.position.y; // different in x
-                _waypointsDist = sqrt(dx * dx + dy * dy); //eucledean distance
-                _downSampling = int(_pathLength / 10.0 / _waypointsDist); //downsampling the path to waypoints
+                double dy = pathMsg->poses[1].pose.position.y - pathMsg->poses[0].pose.position.y; // different in y
+                ROS_INFO("sizes of path  %f ", pathMsg->poses.size());
+                _waypointsDist = sqrt(dx * dx + dy * dy); //eucledean distance between 2 consecutive point in the path
+                _downSampling = int(_pathLength / 10.0 / _waypointsDist); //downsampling the path to waypoints (divide the path to ten part, then get the index)
                 ROS_INFO("waypointdist  %f ", _waypointsDist);
                 ROS_INFO("Down sampling %d ", _downSampling);
             }
 
             // Cut and downsampling the path
-            for (int i = 0; i < pathMsg->poses.size(); i++)
+            for (int i = 0; i < pathMsg->poses.size(); i++) // loop all the poses but break when reach _pathLength
             {
                 if (total_length > _pathLength) //check if greater than the path Length already?
                     break;
                     
-                ROS_INFO(" sampling %d ", sampling);
-                if (sampling == _downSampling)
+                //ROS_INFO(" sampling %d ", sampling);
+                if (sampling == _downSampling) 
                 {
                     geometry_msgs::PoseStamped tempPose;
-                    _tf_listener.transformPose(_odom_frame, ros::Time(0), pathMsg->poses[i], _map_frame, tempPose);
+                    _tf_listener.transformPose(_odom_frame, ros::Time(0), pathMsg->poses[i], _map_frame, tempPose); // transform PoseStamped msg from map to odom frame
                     odom_path.poses.push_back(tempPose); // add new elements at the end of vector
                     sampling = 0;
                 }
@@ -129,12 +134,13 @@ void RLNavNode::pathCB(const nav_msgs::Path::ConstPtr &pathMsg) //pathMsg is a p
 
             if (odom_path.poses.size() >= 6)
             {
-                _odom_path = odom_path; // Path waypoints in odom frame
-                _path_computed = true;
+                _odom_path = odom_path; // Path waypoints in odom frame copy to local variable
+                _path_computed = true; // set flag that path is computed
+
                 // publish odom path
                 odom_path.header.frame_id = _odom_frame;
                 odom_path.header.stamp = ros::Time::now();
-                _pub_odompath.publish(odom_path);
+                _pub_odompath.publish(odom_path); // path that controller should follow
                 ROS_INFO("Publish path from odom frame :pathCB!");
             }
             else
