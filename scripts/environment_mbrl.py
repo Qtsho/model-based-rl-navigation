@@ -56,55 +56,109 @@ class Env():
 
         self.heading = round(heading, 2)
 
-    # def getState(self, scan):
-    #     scan_range = []
-    #     heading = self.heading
-    #     min_range = 0.13
-    #     done = False
 
-    #     for i in range(len(scan.ranges)):
-    #         if scan.ranges[i] == float('Inf'):
-    #             scan_range.append(self.max_scan)
-    #         elif np.isnan(scan.ranges[i]):
-    #             scan_range.append(0)
-    #         else:
-    #             scan_range.append(scan.ranges[i])
+    def _get_obs(self):
+        min_range = 0.13
+        done = False
+        heading = self.heading
+        self.obs_dict = {}
+        self.obs_dict['position'] = np.append(self.position, self.heading)
+        current_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y),2)
+        data = None
 
-    #     obstacle_min_range = round(min(scan_range), 2)
-    #     obstacle_angle = np.argmin(scan_range)
+        while data is None:
+            try:
+                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+            except:
+                print ("Error while waiting laser message!")
+                pass
+        scan_range = []
+        for i in range(len(data.ranges)):
+            if data.ranges[i] == float('Inf'):
+                scan_range.append(self.max_scan)
+            elif np.isnan(data.ranges[i]):
+                scan_range.append(0)
+            else:
+                scan_range.append(data.ranges[i])
+
+        obstacle_min_range = round(min(scan_range), 2)
+        obstacle_angle = np.argmin(scan_range)
+
+        if min_range > min(scan_range) > 0:
+            done = True
+
+        if current_distance < 0.2:
+            self.get_goalbox = True
         
-    #     if min_range > min(scan_range) > 0:
-    #         done = True
-
-    #     current_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y),2)
-    #     if current_distance < 0.2:
-    #         self.get_goalbox = True
-    #     observation = scan_range + [heading, current_distance, obstacle_min_range, obstacle_angle], done
         
-    #     observation = [heading, current_distance], done
-    #     print ('Observation'+ observation)
-        
-    #     return observation
 
-    # def setReward(self, state, done, action):
+        return [heading, current_distance] , done
+
+    def step(self, action):
+        # max_angular_vel = 1.5
+        # ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
+        linear = action[0]
+        angular = action[1]
+        #step
+        vel_cmd = Twist()
+        vel_cmd.linear.x = linear
+        vel_cmd.angular.z = angular
+        self.pub_cmd_vel.publish(vel_cmd)
+
+        #obs/reward/done/score
+        ob, done = self._get_obs()
+        rew = self.getReward(ob, action, done)
+        score = 0 #DUMMY, TODO: get score
+
+        #return
+        env_info = {'obs_dict': self.obs_dict,
+                    'rewards': rew,
+                    'score': score}
+        return ob, rew, done, env_info
+
+    # def getReward(self, observations, actions, done): 
+
+    #     """get reward/s of given (observations, actions) datapoint or datapoints
+    #     Args:
+    #         observations: (batchsize, obs_dim) or (obs_dim,)
+    #         actions: (batchsize, ac_dim) or (ac_dim,)
+    #     Return:
+    #         r_total: reward of this (o,a) pair, dimension is (batchsize,1) or (1,)
+    #         done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
+    #     """
+    #     #initialize and reshape as needed, for batch mode
+     
+    #     self.reward_dict = {} # init the reward dictinary
+
+    #     if(len(observations.shape)==1):
+    #         observations = np.expand_dims(observations, axis = 0) # add one more dimension (1, obs_dim)
+    #         actions = np.expand_dims(actions, axis = 0) #add one more dimentions to axis 0 ->(1, ac_dim)
+    #         batch_mode = False
+    #     else:
+    #         batch_mode = True
+    #         N = len(observations.shape) # number of action sequences.
+
+    #     # loop through all the sequences (batch size) at that time step, calculate the reward funtion
+        
     #     yaw_reward = []
-    #     obstacle_min_range = state[-2]
-    #     current_distance = state[-3]
-    #     heading = state[-4]
+    #     x = observations[:, 0].copy()
+    #     y = observations[:, 1].copy()
+    #     theta = observations[:, 2].copy()
+
+    #     current_distances = round(math.hypot(self.goal_x - x, self.goal_y - y),2)
+
+
+    #     distance_reward = 2 ** (current_distances / self.goal_distance) # dummy TODO change this similar to set reward.s
+        
+
+    #     zeros = np.zeros((observations.shape[0],)).copy()
 
     #     for i in range(5):  #reward for heading to goal
-    #         angle = -pi / 4 + heading + (pi / 8 * i) + pi / 2
+    #         angle = -pi / 4 + theta + (pi / 8 * i) + pi / 2
     #         tr = 1 - 4 * math.fabs(0.5 - math.modf(0.25 + 0.5 * angle % (2 * math.pi) / math.pi)[0])
     #         yaw_reward.append(tr)
-
-    #     distance_rate = 2 ** (current_distance / self.goal_distance) #reward for distance to goal
-
-    #     if obstacle_min_range < 0.5: #reward for obstacle avoidance
-    #         ob_reward = -5
-    #     else:
-    #         ob_reward = 0
-    #     #TODO: add time to reward
-    #     reward = ((round(yaw_reward[action] * 5, 2)) * distance_rate) + ob_reward
+        
+    #     reward = ((round(yaw_reward[actions] * 5, 2)) * distance_reward)
 
     #     if done:
     #         rospy.loginfo("Collision!!")
@@ -118,107 +172,25 @@ class Env():
     #         self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
     #         self.goal_distance = self.getGoalDistace()
     #         self.get_goalbox = False
+    #     self.reward_dict['distance_reward'] = distance_reward
+    #     #total reward.
+    #     self.reward_dict['r_total'] = reward + self.reward_dict['distance_reward'] 
+    #     ##done is NOT always false for this env 
+    #     dones = zeros.copy() #change when reach local path. this is zeros because cheetah is continous task
+        
+    #     if(not batch_mode):
+    #         return self.reward_dict['r_total'][0], dones[0]
 
-        # return reward
-    def _get_obs(self):
-
-        self.obs_dict = {}
-        self.obs_dict['x'] = self.position.x.copy()
-        self.obs_dict['y'] = self.position.y.copy()
-        self.obs_dict['yaw'] = self.get_body_com("torso").flat.copy()
-        current_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y),2)
-
-        return np.concatenate([
-            self.obs_dict['x'], #9
-            self.obs_dict['y'], #9
-            self.obs_dict['yaw'], #3
-            
-        ])
-    
-    def step(self, action):
-        max_angular_vel = 1.5
-        ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
-        #step
-        vel_cmd = Twist()
-        vel_cmd.linear.x = 0.15
-        vel_cmd.angular.z = ang_vel
-        self.pub_cmd_vel.publish(vel_cmd)
-
-        #obs/reward/done/score
-        ob = self._get_obs()
-        rew, done = self.get_reward(ob, action)
-        score = self.get_score(ob)
-
-        #return
-        env_info = {'obs_dict': self.obs_dict,
-                    'rewards': self.reward_dict,
-                    'score': score}
-        return ob, rew, done, env_info
-
-    # def step(self, action):
-    #     max_angular_vel = 1.5
-    #     ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
-    #     #lin_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
-    
-    #     vel_cmd = Twist()
-    #     vel_cmd.linear.x = 0.15
-    #     vel_cmd.angular.z = ang_vel
-    #     self.pub_cmd_vel.publish(vel_cmd)
-
-    #     data = None
-    #     while data is None:
-    #         try:
-    #             data = rospy.wait_for_message('scan', LaserScan, timeout=5)
-    #         except:
-    #             print ("Error while waiting laser message!")
-    #             pass
-
-    #     state, done = self.getState(data)
-    #     reward = self.setReward(state, done, action)
-    #     return np.asarray(state), reward, done
-
+    #     return self.reward_dict['r_total'], dones
     def getReward(self, observations, actions, done): 
-
-        """get reward/s of given (observations, actions) datapoint or datapoints
-        Args:
-            observations: (batchsize, obs_dim) or (obs_dim,)
-            actions: (batchsize, ac_dim) or (ac_dim,)
-        Return:
-            r_total: reward of this (o,a) pair, dimension is (batchsize,1) or (1,)
-            done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
-        """
-        #initialize and reshape as needed, for batch mode
-     
-        self.reward_dict = {} # init the reward dictinary
-
-        if(len(observations.shape)==1):
-            observations = np.expand_dims(observations, axis = 0) # add one more dimension (1, obs_dim)
-            actions = np.expand_dims(actions, axis = 0) #add one more dimentions to axis 0 ->(1, ac_dim)
-            batch_mode = False
-        else:
-            batch_mode = True
-            N = len(observations.shape) # number of action sequences.
-
-        # loop through all the sequences (batch size) at that time step, calculate the reward funtion
+        heading = observations[0]
         yaw_reward = []
-        x = observations[:, 0].copy()
-        y = observations[:, 1].copy()
-        theta = observations[:, 2].copy()
+        current_distance = observations [1]
+        self.reward_dict = {}
 
-        current_distances = round(math.hypot(self.goal_x - x, self.goal_y - y),2)
+        distance_rate = 2 ** (current_distance / self.goal_distance) #reward for distance to goal
 
-
-        distance_reward = 2 ** (current_distances / self.goal_distance) # dummy TODO change this similar to set reward.s
-        
-
-        zeros = np.zeros((observations.shape[0],)).copy()
-
-        for i in range(5):  #reward for heading to goal
-            angle = -pi / 4 + theta + (pi / 8 * i) + pi / 2
-            tr = 1 - 4 * math.fabs(0.5 - math.modf(0.25 + 0.5 * angle % (2 * math.pi) / math.pi)[0])
-            yaw_reward.append(tr)
-        
-        reward = ((round(yaw_reward[actions] * 5, 2)) * distance_reward)
+        #TODO: reward funtion
 
         if done:
             rospy.loginfo("Collision!!")
@@ -232,17 +204,12 @@ class Env():
             self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
             self.goal_distance = self.getGoalDistace()
             self.get_goalbox = False
-        self.reward_dict['distance_reward'] = distance_reward
-        #total reward.
-        self.reward_dict['r_total'] = reward + self.reward_dict['distance_reward'] 
-        ##done is NOT always false for this env 
-        dones = zeros.copy() #change when reach local path. this is zeros because cheetah is continous task
-        
-        if(not batch_mode):
-            return self.reward_dict['r_total'][0], dones[0]
+        self.reward_dict['distance reward'] =distance_rate
 
-        return self.reward_dict['r_total'], dones
+        reward = distance_rate
 
+
+        return reward
 
 
     def reset(self):
@@ -265,7 +232,7 @@ class Env():
             self.initGoal = False
 
         self.goal_distance = self.getGoalDistace()
-        state, done = self.getState(data)
+        state, done = self._get_obs()
 
         return np.asarray(state)
         #later added funtion:pause the simulation

@@ -14,7 +14,7 @@ import copy
 from tqdm import tqdm
 
 from std_msgs.msg import Float32MultiArray
-from environment_stage_thesis import Env
+from environment_mbrl import Env
  
 from typing import Union, List
 from typing_extensions import TypedDict
@@ -74,6 +74,7 @@ def Path(
    
 def sample_trajectory(env, policy, max_path_length):
     '''This wont use render mode-> no imgs_obs'''
+    print("sample trajectory until crash or reach max path length")
     ob = env.reset()
     obs, acs, rewards, next_obs, terminals  = [], [], [], [], []
     steps = 0
@@ -82,6 +83,7 @@ def sample_trajectory(env, policy, max_path_length):
         ac = policy.get_action(ob)
         ac = ac[0]
         acs.append(ac)
+        
         ob, rew, done, _ = env.step(ac)
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
@@ -99,6 +101,7 @@ def sample_trajectory(env, policy, max_path_length):
 
 #run sample_trajectory() until the min_timestep_batch reach -> save in to paths, a list of PathDict    
 def sample_trajectories(env, policy, min_timestep_perbatch, max_path_length):
+    
     time_step_this_batch = 0
     paths : List[PathDict] = [] #a empty list contains only PathDict object. Typehint, just to be more clear
     
@@ -106,6 +109,8 @@ def sample_trajectories(env, policy, min_timestep_perbatch, max_path_length):
         path = sample_trajectory(env, policy, max_path_length) # a path should reach done flag or more than max_path_lenght
         paths.append(path)
         time_step_this_batch += path["observation"].shape[0] #take the  dict key observation, then the size of it first dimension
+    print('time stpe this batch',time_step_this_batch)
+
     return paths, time_step_this_batch
 
 def convert_listofrollouts(paths):
@@ -316,7 +321,7 @@ class FFModel(nn.Module):
         self.learning_rate = learning_rate
 
         self.delta_network = build_mlp(
-            input_size=self.ob_dim + self.ac_dim,
+            input_size= self.ob_dim + self.ac_dim,
             output_size=self.ob_dim,
             n_layers=self.n_layers,
             size=self.size,
@@ -335,21 +340,21 @@ class FFModel(nn.Module):
         self.delta_std = None
 
     # update statistics of the replay buffer.
-    def update_statistics(
-            self,
-            obs_mean,
-            obs_std,
-            acs_mean,
-            acs_std,
-            delta_mean,
-            delta_std,
-    ):
-        self.obs_mean = from_numpy(obs_mean)
-        self.obs_std = from_numpy(obs_std)
-        self.acs_mean = from_numpy(acs_mean)
-        self.acs_std =from_numpy(acs_std)
-        self.delta_mean = from_numpy(delta_mean)
-        self.delta_std =from_numpy(delta_std)
+    # def update_statistics(
+    #         self,
+    #         obs_mean,
+    #         obs_std,
+    #         acs_mean,
+    #         acs_std,
+    #         delta_mean,
+    #         delta_std,
+    # ):
+    #     self.obs_mean = from_numpy(obs_mean)
+    #     self.obs_std = from_numpy(obs_std)
+    #     self.acs_mean = from_numpy(acs_mean)
+    #     self.acs_std =from_numpy(acs_std)
+    #     self.delta_mean = from_numpy(delta_mean)
+    #     self.delta_std =from_numpy(delta_std)
 
     def forward(
             self,
@@ -443,6 +448,12 @@ class FFModel(nn.Module):
              - 'delta_std'
         :return:
         """
+        print()
+        observations = from_numpy(observations)
+        actions = from_numpy(actions)
+        next_observations = from_numpy(next_observations)
+        data_statistics = {key: from_numpy(value) for key, value in
+                           data_statistics.items()}
         target = normalize(
             next_observations - observations,
             data_statistics['delta_mean'],
@@ -509,25 +520,22 @@ class MPCPolicy():
     def sample_action_sequences(self, num_sequences, horizon):
         #  uniformly sample trajectories and return an array of
         # dimensions (num_sequences, horizon, self.ac_dim) in the range
-        # [self.low, self.high]
-
-        random_action_sequences = self.low + np.random.random_sample(
-            (num_sequences, horizon, self.ac_dim)) * (self.high - self.low)  #random shooting TODO: udate to CEM
-
-        return random_action_sequences #random shooting
+        # [self.low, self.high] # TODO RANDOM Shooting
+        random_action_sequences = np.random.uniform(self.low, self.high, (num_sequences, horizon, self.ac_dim))
+        return random_action_sequences
 
     def get_action(self, obs):
 
         if self.data_statistics is None:
-            # print("WARNING: performing random actions.")
-            return self.sample_action_sequences(num_sequences=1, horizon=1)[0]
+            print("WARNING: performing random actions.")
+            return self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]
 
         # sample random actions (N x horizon)
-        candidate_action_sequences = self.sample_action_sequences(
-            num_sequences=self.N, horizon=self.horizon)
+        candidate_action_sequences = self.sample_action_sequences(num_sequences=self.N, horizon=self.horizon)
 
         # for each model in ensemble:
         predicted_sum_of_rewards_per_model = []
+        
         for model in self.dyn_models:
             sum_of_rewards = self.calculate_sum_of_rewards(
                 obs, candidate_action_sequences, model) # shape (N,)
@@ -541,6 +549,7 @@ class MPCPolicy():
         best_action_sequence = candidate_action_sequences[predicted_rewards.argmax()]
             
         action_to_take = best_action_sequence[0] # first index
+        print("ACTION:",action_to_take[None])
         return action_to_take[None]  # Unsqueeze the first index
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model: FFModel):
@@ -589,7 +598,7 @@ class MPCPolicy():
 
 
 class ReinforceAgent():
-    def __init__(self, env, state_size, action_size):
+    def __init__(self, env, action_size, state_size):
         
         self.ensemble_size = 3
         self.load_episode = 0
@@ -598,8 +607,8 @@ class ReinforceAgent():
         self.dyn_models = []
         for i in range(self.ensemble_size):
             model = FFModel(
-                state_size,
                 action_size,
+                state_size,
                 n_layers = 2,
                 size  = 250, #: dimension of each hidden layer
                 learning_rate = 0.00025,
@@ -624,29 +633,24 @@ class ReinforceAgent():
         num_data = ob_no.shape[0]
         num_data_per_ens = int(num_data / self.ensemble_size)
 
-        for i in range(self.ensemble_size): #loop through all the ensemble
-
+        start = 0
+        for model in self.dyn_models:
             # select which datapoints to use for this model of the ensemble
-            # you might find the num_data_per_env variable defined above useful
-            sample : np.ndarray = np.concatenate([np.ones(num_data_per_ens,dtype=bool), np.zeros(num_data - num_data_per_ens,dtype=bool)])
-            np.random.shuffle(sample)
-            #random batch
-            observations = ob_no(sample)
-            actions = ac_na(sample)
-            
-            next_observations = next_ob_no(sample)
+            # you might find the num_data_per_ens variable defined above useful
+            finish = start + num_data_per_ens
+
+            observations = ob_no[start:finish] # TODO(Q1)
+            actions = ac_na[start:finish] # TODO(Q1)
+            next_observations = next_ob_no[start:finish] # TODO(Q1)
 
             # use datapoints to update one of the dyn_models
-            model =  self.dyn_models[i]
-            log = model.update(observations, actions, next_observations,
-                                self.data_statistics)
-            loss = log['Training Loss']
+            loss = model.update(observations, actions, next_observations, self.data_statistics)
             losses.append(loss)
 
+            start = finish
+
         avg_loss = np.mean(losses)
-        return {
-            'Training Loss': avg_loss,
-        }
+        return avg_loss
 
     def add_to_replay_buffer(self, paths, add_sl_noise=False): #~ store_trasition, update statistics
 
@@ -669,30 +673,29 @@ class ReinforceAgent():
         self.actor.data_statistics = self.data_statistics
 
     def sample(self, batch_size): 
-        # NOTE: sampling batch_size * ensemble_size,
+       # NOTE: The size of the batch returned here is sampling batch_size * ensemble_size,
         # so each model in our ensemble can get trained on batch_size data
-        return self.replay_buffer.sample_random_data(
-            batch_size * self.ensemble_size)
+        return self.replay_buffer.sample_random_data(batch_size * self.ensemble_size)
 
         
 
 if __name__ == '__main__':
-    rospy.init_node('turtlebot3_dqn_stage_thesis')
+    rospy.init_node('turtlebot3_mbrl')
     pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
     pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
     action_size = 5 #must be odd number
-    state_size = 28
+    state_size = 2
 
     all_logs = []
 
     """Parameters"""
     n_iter=  20 #number of (dagger) iterations
     num_agent_train_steps_per_iter= 1000
-    train_batch_size = 512 ##steps used per gradient step (used for training)
+    train_batch_size = 3 ##steps used per gradient step (used for training) 512
 
     """Env, agent objects initialization"""
     env = Env(action_size) 
-    agent = ReinforceAgent(env ,state_size, action_size)
+    agent = ReinforceAgent(env ,action_size, state_size)
     
     # for e in tqdm(range(agent.load_episode + 1, EPISODES)):
     #     done = False
@@ -705,7 +708,6 @@ if __name__ == '__main__':
     for itr in range(n_iter):
         if itr % 1 == 0:
             print("\n\n********** Iteration %i ************"%itr)
-            
         #TODO: store training trajectories in pickle file: Pkl
 
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor, min_timestep_perbatch= 5, max_path_length= 10)

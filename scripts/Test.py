@@ -118,8 +118,8 @@ from typing import Tuple, List
 
 # print (path["obs"])
 ##need a funtion convert list of rollouts into a single np array, using list comprehension 
-a = np.array([[1,2,4,4],[1,3,4,5]])
-print (a)
+a = np.array([1,2,4,4])
+b = a, True
+print (b)
 #a = np.append(a,[1])
 
-print (a[-1:4])

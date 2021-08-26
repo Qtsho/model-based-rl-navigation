@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Arguments -->
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="stage" default= "stage4"/>
+  <arg name="map_file" default="$(find rl_move_base)/maps/4.yaml"/>
+  <arg name="open_rviz" default="true"/>
+  <arg name="move_forward_only" default="false"/>
+  <arg name="cmd_vel_topic" default="cmd_vel" />
+  <arg name="odom_topic" default="odom" />
+  
+
+  <!-- Map server -->
+  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>
+
+  <!-- Localization: AMCL -->
+  <include file="$(find rl_move_base)/launch/localization/amcl.launch"/>
+
+
+  <param name="stage_number"  value="$(arg stage)"/>
+  <node pkg="rl_move_base" type="turtlebot3_mbrl" name="turtlebot3_mbrl" output="screen" />
+  <node pkg="rl_move_base" type="combination_obstacle_1" name="combination_obstacle_1" output="screen" />
+  <node pkg="rl_move_base" type="combination_obstacle_2" name="combination_obstacle_2" output="screen" />
+
+
+
+  <!-- rviz -->
+  <group if="$(arg open_rviz)"> 
+    <node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find rl_move_base)/rviz/rviz.rviz"/>
+  </group>
+</launch>
