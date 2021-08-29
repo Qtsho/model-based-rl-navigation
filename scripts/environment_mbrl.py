@@ -21,8 +21,9 @@ class Env():
         self.heading = 0
         self.action_size = action_size
         self.action_space = np.arange(0,action_size,1)
-        self.observation_space = (28,)
+        self.observation_space = (2,)
         self.max_scan = 5.5
+        
         self.initGoal = True
         self.get_goalbox = False
         self.position = Pose()
@@ -32,7 +33,7 @@ class Env():
         self.unpause_proxy = rospy.ServiceProxy('gazebo/unpause_physics', Empty)
         self.pause_proxy = rospy.ServiceProxy('gazebo/pause_physics', Empty)
         self.respawn_goal = Respawn()
-        
+        self.min_range = 0.13
 
     def getGoalDistace(self):
         goal_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y), 2)
@@ -58,8 +59,7 @@ class Env():
 
 
     def _get_obs(self):
-        min_range = 0.13
-        done = False
+    
         heading = self.heading
         self.obs_dict = {}
         self.obs_dict['position'] = np.append(self.position, self.heading)
@@ -81,18 +81,12 @@ class Env():
             else:
                 scan_range.append(data.ranges[i])
 
-        obstacle_min_range = round(min(scan_range), 2)
-        obstacle_angle = np.argmin(scan_range)
 
-        if min_range > min(scan_range) > 0:
-            done = True
-
-        if current_distance < 0.2:
-            self.get_goalbox = True
-        
-        
-
-        return [heading, current_distance] , done
+      
+        scan = np.array([scan_range])
+        pos = np.array([heading, current_distance])
+        observations = np.append(pos,scan)
+        return observations
 
     def step(self, action):
         # max_angular_vel = 1.5
@@ -106,8 +100,8 @@ class Env():
         self.pub_cmd_vel.publish(vel_cmd)
 
         #obs/reward/done/score
-        ob, done = self._get_obs()
-        rew = self.getReward(ob, action, done)
+        ob = self._get_obs()
+        rew,done = self.getReward(ob, action)
         score = 0 #DUMMY, TODO: get score
 
         #return
@@ -182,20 +176,41 @@ class Env():
     #         return self.reward_dict['r_total'][0], dones[0]
 
     #     return self.reward_dict['r_total'], dones
-    def getReward(self, observations, actions, done): 
-        heading = observations[0]
+    def getReward(self, observations, actions): 
+        
+        if(len(observations.shape)==1):
+            observations = np.expand_dims(observations, axis = 0)
+            actions = np.expand_dims(actions, axis = 0)
+            batch_mode = False
+            print('no batch mode ')
+        else:
+            print('batch mode ')
+            batch_mode = True
+
+
+        heading = observations[:,0]
         yaw_reward = []
-        current_distance = observations [1]
+        current_distance = observations [:,1]
         self.reward_dict = {}
 
         distance_rate = 2 ** (current_distance / self.goal_distance) #reward for distance to goal
 
         #TODO: reward funtion
 
-        if done:
-            rospy.loginfo("Collision!!")
-            reward = -500
-            self.pub_cmd_vel.publish(Twist()) #stop
+       
+        dones = np.zeros((observations.shape[0],))
+
+        # obstacle_min_range = round(min(scan_range), 2)
+        # obstacle_angle = np.argmin(scan_range)
+        # if self.min_range > min(scan_range) > 0:
+        #     done = True
+        
+        # if dones:
+        #     rospy.loginfo("Collision!!")
+        #     reward = -500
+        #     self.pub_cmd_vel.publish(Twist()) #stop
+        if current_distance < 0.2:
+            self.get_goalbox = True
 
         if self.get_goalbox:
             rospy.loginfo("Goal!!")
@@ -204,12 +219,15 @@ class Env():
             self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
             self.goal_distance = self.getGoalDistace()
             self.get_goalbox = False
-        self.reward_dict['distance reward'] =distance_rate
+        self.reward_dict['distance reward'] = distance_rate
 
-        reward = distance_rate
+        self.reward_dict['r_total'] = distance_rate
 
 
-        return reward
+        if(not batch_mode):
+            return self.reward_dict['r_total'][0], dones[0]
+
+        return self.reward_dict['r_total'], dones 
 
 
     def reset(self):
@@ -232,7 +250,7 @@ class Env():
             self.initGoal = False
 
         self.goal_distance = self.getGoalDistace()
-        state, done = self._get_obs()
+        state = self._get_obs()
 
         return np.asarray(state)
         #later added funtion:pause the simulation

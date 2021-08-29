@@ -81,7 +81,6 @@ def sample_trajectory(env, policy, max_path_length):
     while True:
         obs.append(ob)
         ac = policy.get_action(ob)
-        ac = ac[0]
         acs.append(ac)
         
         ob, rew, done, _ = env.step(ac)
@@ -474,7 +473,7 @@ class FFModel(nn.Module):
             data_statistics['delta_mean'],
             data_statistics['delta_std'],
         )
-        loss = self.loss(pred_delta, target) # TODO(Q1) compute the loss
+        loss = self.loss(target, pred_delta) # TODO(Q1) compute the loss
         # Hint: `self(...)` returns a tuple, but you only need to use one of the
         # outputs.
 
@@ -482,9 +481,7 @@ class FFModel(nn.Module):
         loss.backward() #gradient decent on the loss
         self.optimizer.step()
 
-        return {
-            'Training Loss': to_numpy(loss),
-        }
+        return to_numpy(loss)
 
 # MPC class, apply action sequences and choose first action of the best action sequences that maximize the reward function.
 
@@ -507,7 +504,7 @@ class MPCPolicy():
         self.N = N
         self.data_statistics = None  # NOTE must be updated from elsewhere T: in RL agent
 
-        self.ob_dim = self.env.observation_space
+        self.ob_dim = self.env.observation_space[0]
 
         # action space
         self.ac_space = self.env.action_space
@@ -517,7 +514,7 @@ class MPCPolicy():
         self.low = 0
         self.high = 5
     
-    def sample_action_sequences(self, num_sequences, horizon):
+    def sample_action_sequences(self, num_sequences, horizon): 
         #  uniformly sample trajectories and return an array of
         # dimensions (num_sequences, horizon, self.ac_dim) in the range
         # [self.low, self.high] # TODO RANDOM Shooting
@@ -527,7 +524,7 @@ class MPCPolicy():
     def get_action(self, obs):
 
         if self.data_statistics is None:
-            print("WARNING: performing random actions.")
+            print("WARNING: performing random actions.",self.sample_action_sequences(num_sequences=1, horizon=1)[0][0])
             return self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]
 
         # sample random actions (N x horizon)
@@ -535,7 +532,7 @@ class MPCPolicy():
 
         # for each model in ensemble:
         predicted_sum_of_rewards_per_model = []
-        
+
         for model in self.dyn_models:
             sum_of_rewards = self.calculate_sum_of_rewards(
                 obs, candidate_action_sequences, model) # shape (N,)
@@ -547,10 +544,10 @@ class MPCPolicy():
 
         # pick the action sequence and return the 1st element of that sequence
         best_action_sequence = candidate_action_sequences[predicted_rewards.argmax()]
-            
-        action_to_take = best_action_sequence[0] # first index
+        action_to_take = best_action_sequence[0] # first index of the best action sequence
+        
         print("ACTION:",action_to_take[None])
-        return action_to_take[None]  # Unsqueeze the first index
+        return action_to_take  # Unsqueeze the first index? do we need unsqeezing= adding 1 dim
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model: FFModel):
         """
@@ -580,11 +577,11 @@ class MPCPolicy():
         N, H, _ = candidate_action_sequences.shape # number of action sequences, horizon, action dims
 
         pred_obs = np.zeros((N, H, self.ob_dim))
-        pred_obs[:, 0] = np.tile(obs[None, :], (N, 1))
+        pred_obs[:, 0] = np.tile(obs, (N, 1))
         rewards = np.zeros((N, H))
         for t in range(H):
-            rewards[:, t], _ = self.env.get_reward(
-                pred_obs[:, t], candidate_action_sequences[:, t]) # N rewards of N action sequences.
+            #this get reward accross all the trajectories in one model
+            rewards[:, t] = self.env.getReward(pred_obs[:, t], candidate_action_sequences[:, t], self.env.scan) # N rewards of N action sequences.
             if t < H - 1: # get prediction until the end of the horizon
                 pred_obs[:, t + 1] = model.get_prediction(
                     pred_obs[:, t],
@@ -683,19 +680,19 @@ if __name__ == '__main__':
     rospy.init_node('turtlebot3_mbrl')
     pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
     pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
-    action_size = 5 #must be odd number
-    state_size = 2
+    action_size = 2 
+    observation_size = 2
 
     all_logs = []
 
     """Parameters"""
     n_iter=  20 #number of (dagger) iterations
-    num_agent_train_steps_per_iter= 1000
+    num_agent_train_steps_per_iter= 10#1000
     train_batch_size = 3 ##steps used per gradient step (used for training) 512
 
     """Env, agent objects initialization"""
     env = Env(action_size) 
-    agent = ReinforceAgent(env ,action_size, state_size)
+    agent = ReinforceAgent(env ,action_size, observation_size)
     
     # for e in tqdm(range(agent.load_episode + 1, EPISODES)):
     #     done = False
