@@ -126,5 +126,10 @@ from typing import Tuple, List
 # best = acttion[1]
 # print (best)
 # print('action to take', type(best[0]))
-y = np.array([5])
-print (len(y.shape))
+# x = np.zeros((1000,10,26))
+# print(x[:,0,:].shape)
+# a= np.array([26,1])
+
+# b= np.expand_dims(a, axis = 0)
+# print(a.shape)
+# print(b.shape)

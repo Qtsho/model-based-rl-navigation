@@ -21,7 +21,7 @@ class Env():
         self.heading = 0
         self.action_size = action_size
         self.action_space = np.arange(0,action_size,1)
-        self.observation_space = (2,)
+        self.observation_space = (26,)
         self.max_scan = 5.5
         
         self.initGoal = True
@@ -81,14 +81,13 @@ class Env():
             else:
                 scan_range.append(data.ranges[i])
 
-        done = 0
-        if self.min_range > min(scan_range) > 0:
-            done = 1
-        scan  = np.array([scan_range])
+
+      
+        scan = np.array([scan_range])
         pos = np.array([heading, current_distance])
-        observations = pos
+        observations = np.append(pos,scan)
         print(observations)
-        return observations, done
+        return observations
 
     def step(self, action):
         # max_angular_vel = 1.5
@@ -102,8 +101,8 @@ class Env():
         self.pub_cmd_vel.publish(vel_cmd)
 
         #obs/reward/done/score
-        ob, done = self._get_obs()
-        rew = self.getReward(ob, action)
+        ob = self._get_obs()
+        rew, done = self.getReward(ob, action)
         score = 0 #DUMMY, TODO: get score
 
         #return
@@ -112,14 +111,82 @@ class Env():
                     'score': score}
         return ob, rew, done, env_info
 
+    # def getReward(self, observations, actions, done): 
+
+    #     """get reward/s of given (observations, actions) datapoint or datapoints
+    #     Args:
+    #         observations: (batchsize, obs_dim) or (obs_dim,)
+    #         actions: (batchsize, ac_dim) or (ac_dim,)
+    #     Return:
+    #         r_total: reward of this (o,a) pair, dimension is (batchsize,1) or (1,)
+    #         done: True if env reaches terminal state, dimension is (batchsize,1) or (1,)
+    #     """
+    #     #initialize and reshape as needed, for batch mode
+     
+    #     self.reward_dict = {} # init the reward dictinary
+
+    #     if(len(observations.shape)==1):
+    #         observations = np.expand_dims(observations, axis = 0) # add one more dimension (1, obs_dim)
+    #         actions = np.expand_dims(actions, axis = 0) #add one more dimentions to axis 0 ->(1, ac_dim)
+    #         batch_mode = False
+    #     else:
+    #         batch_mode = True
+    #         N = len(observations.shape) # number of action sequences.
+
+    #     # loop through all the sequences (batch size) at that time step, calculate the reward funtion
+        
+    #     yaw_reward = []
+    #     x = observations[:, 0].copy()
+    #     y = observations[:, 1].copy()
+    #     theta = observations[:, 2].copy()
+
+    #     current_distances = round(math.hypot(self.goal_x - x, self.goal_y - y),2)
+
+
+    #     distance_reward = 2 ** (current_distances / self.goal_distance) # dummy TODO change this similar to set reward.s
+        
+
+    #     zeros = np.zeros((observations.shape[0],)).copy()
+
+    #     for i in range(5):  #reward for heading to goal
+    #         angle = -pi / 4 + theta + (pi / 8 * i) + pi / 2
+    #         tr = 1 - 4 * math.fabs(0.5 - math.modf(0.25 + 0.5 * angle % (2 * math.pi) / math.pi)[0])
+    #         yaw_reward.append(tr)
+        
+    #     reward = ((round(yaw_reward[actions] * 5, 2)) * distance_reward)
+
+    #     if done:
+    #         rospy.loginfo("Collision!!")
+    #         reward = -500
+    #         self.pub_cmd_vel.publish(Twist()) #stop
+
+    #     if self.get_goalbox:
+    #         rospy.loginfo("Goal!!")
+    #         reward = 1000
+    #         self.pub_cmd_vel.publish(Twist()) # stop
+    #         self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
+    #         self.goal_distance = self.getGoalDistace()
+    #         self.get_goalbox = False
+    #     self.reward_dict['distance_reward'] = distance_reward
+    #     #total reward.
+    #     self.reward_dict['r_total'] = reward + self.reward_dict['distance_reward'] 
+    #     ##done is NOT always false for this env 
+    #     dones = zeros.copy() #change when reach local path. this is zeros because cheetah is continous task
+        
+    #     if(not batch_mode):
+    #         return self.reward_dict['r_total'][0], dones[0]
+
+    #     return self.reward_dict['r_total'], dones
     def getReward(self, observations, actions): 
         
-       
+        print(len(observations.shape))
         if(len(observations.shape)==1): # 1D array
             observations = np.expand_dims(observations, axis = 0) #covert to 2D array with (1,obs)
             actions = np.expand_dims(actions, axis = 0)
             batch_mode = False
+            print('no batch mode ')
         else:
+            print('batch mode ')
             batch_mode = True
 
 
@@ -131,22 +198,38 @@ class Env():
         distance_rate = 2 ** (current_distance / self.goal_distance) #reward for distance to goal
 
         #TODO: reward funtion
-        self.reward_dict['distance reward'] = distance_rate
+
        
-        # if current_distance:# batch mode, wont work
+        dones = np.zeros((observations.shape[0],))
+
+        # obstacle_min_range = round(min(scan_range), 2)
+        # obstacle_angle = np.argmin(scan_range)
+        # if self.min_range > min(scan_range) > 0:
+        #     done = True
+        
+        # if dones:
+        #     rospy.loginfo("Collision!!")
+        #     reward = -500
+        #     self.pub_cmd_vel.publish(Twist()) #stop
+        # if (current_distance < 0.2):
         #     self.get_goalbox = True
+
+        # if self.get_goalbox:
         #     rospy.loginfo("Goal!!")
-        #     self.reward_dict['distance reward']  = 1000
+        #     reward = 1000
         #     self.pub_cmd_vel.publish(Twist()) # stop
         #     self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
         #     self.goal_distance = self.getGoalDistace()
         #     self.get_goalbox = False
+        self.reward_dict['distance reward'] = distance_rate
 
-        self.reward_dict['r_total'] = self.reward_dict['distance reward']
+        self.reward_dict['r_total'] = distance_rate
+
 
         if(not batch_mode):
-            return self.reward_dict['r_total'][0]
-        return self.reward_dict['r_total'] 
+            return self.reward_dict['r_total'][0], dones[0]
+
+        return self.reward_dict['r_total'], dones 
 
 
     def reset(self):
@@ -169,7 +252,7 @@ class Env():
             self.initGoal = False
 
         self.goal_distance = self.getGoalDistace()
-        state, done = self._get_obs()
+        state = self._get_obs()
 
         return np.asarray(state)
         #later added funtion:pause the simulation

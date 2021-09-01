@@ -82,8 +82,8 @@ def sample_trajectory(env, policy, max_path_length):
         obs.append(ob)
         ac = policy.get_action(ob)
         acs.append(ac)
+        
         ob, rew, done, _ = env.step(ac)
-        print(done)
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
         rewards.append(rew)
@@ -338,6 +338,22 @@ class FFModel(nn.Module):
         self.delta_mean = None
         self.delta_std = None
 
+    # update statistics of the replay buffer.
+    # def update_statistics(
+    #         self,
+    #         obs_mean,
+    #         obs_std,
+    #         acs_mean,
+    #         acs_std,
+    #         delta_mean,
+    #         delta_std,
+    # ):
+    #     self.obs_mean = from_numpy(obs_mean)
+    #     self.obs_std = from_numpy(obs_std)
+    #     self.acs_mean = from_numpy(acs_mean)
+    #     self.acs_std =from_numpy(acs_std)
+    #     self.delta_mean = from_numpy(delta_mean)
+    #     self.delta_std =from_numpy(delta_std)
 
     def forward(
             self,
@@ -486,7 +502,7 @@ class MPCPolicy():
         self.dyn_models = dyn_models
         self.horizon = horizon
         self.N = N
-        self.data_statistics = None  
+        self.data_statistics = None  # NOTE must be updated from elsewhere T: in RL agent
 
         self.ob_dim = self.env.observation_space[0]
 
@@ -513,7 +529,7 @@ class MPCPolicy():
 
         # sample random actions (N x horizon)
         candidate_action_sequences = self.sample_action_sequences(num_sequences=self.N, horizon=self.horizon)
-        
+
         # for each model in ensemble:
         predicted_sum_of_rewards_per_model = []
 
@@ -530,7 +546,7 @@ class MPCPolicy():
         best_action_sequence = candidate_action_sequences[predicted_rewards.argmax()]
         action_to_take = best_action_sequence[0] # first index of the best action sequence
         
-        print("Best Action to take:",action_to_take[None])
+        print("ACTION:",action_to_take[None])
         return action_to_take  # Unsqueeze the first index? do we need unsqeezing= adding 1 dim
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model: FFModel):
@@ -559,17 +575,15 @@ class MPCPolicy():
         #       in batch, which can be much faster than looping through each
         #       action sequence.
         N, H, _ = candidate_action_sequences.shape # number of action sequences, horizon, action dims
-       
+        print (obs.shape)
         pred_obs = np.zeros((N, H, self.ob_dim))
-       
+        print (pred_obs[:, 0].shape)
         pred_obs[:, 0] = np.tile(obs, (N, 1))
         rewards = np.zeros((N, H))
 
         for t in range(H):
             #this get reward accross all the trajectories in one model 
-            rewards_at_t = self.env.getReward(pred_obs[:, t], candidate_action_sequences[:, t])
-            
-            rewards[:, t] = rewards_at_t # N rewards of N action sequences.
+            rewards[:, t] = self.env.getReward(pred_obs[:, t], candidate_action_sequences[:, t]) # N rewards of N action sequences.
             if t < H - 1: # get prediction until the end of the horizon
                 pred_obs[:, t + 1] = model.get_prediction(
                     pred_obs[:, t],
@@ -669,7 +683,7 @@ if __name__ == '__main__':
     pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
     pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
     action_size = 2 
-    observation_size = 2 # heading ,current distance, 24 laser scans
+    observation_size = 26 # heading ,current distance, 24 laser scans
 
     all_logs = []
 
@@ -681,32 +695,77 @@ if __name__ == '__main__':
     """Env, agent objects initialization"""
     env = Env(action_size) 
     agent = ReinforceAgent(env ,action_size, observation_size)
- 
+    
+    # for e in tqdm(range(agent.load_episode + 1, EPISODES)):
+    #     done = False
+    #     state = env.reset()
+    #     score = 0
+
     #Training loop, on policy RL:
     #collect paths using policy for learning   
    
-    for itr in tqdm(range(n_iter)):
+    for itr in range(n_iter):
         if itr % 1 == 0:
             print("\n\n********** Iteration %i ************"%itr)
         #TODO: store training trajectories in pickle file: Pkl
 
-        paths, envsteps_this_batch = sample_trajectories(env, agent.actor, min_timestep_perbatch= 5, max_path_length= 100)
+        paths, envsteps_this_batch = sample_trajectories(env, agent.actor, min_timestep_perbatch= 5, max_path_length= 10)
         #add the paths to the replay buffer with noise
         agent.add_to_replay_buffer(paths, True)
     
-        for train_step in range(num_agent_train_steps_per_iter):
+        for train_step in tqdm(range(num_agent_train_steps_per_iter)):
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             all_logs.append(train_log)
-    
-    print(all_logs)
 
         
 
 
     #TODO: Log model prediction
         
+        
+    
+    """ 
+    action_size = 5 #must be odd number
+    max_path_length = 15
+    rospy.logdebug("------Init ENV")
+     # 
+    '''
+    #TODO write RL trainer similar to modelfree.Step:
 
+    make training env
+    create objects: MBagent,
+    run base policy to collect D
+
+    run training loop:
+        choose action using MPC
+        
+        perform a step in the enviroment.
+        add (s,a) to the replay buffer.
+    '''
+    score= 0
+    n_iter = 20 # number of Dagger iterations
+    print("\nCollecting data to be used for training...")
+    agent = ReinforceAgent(env,state_size,action_size)
+
+    ##in some kind of loop that indicate start of a episode
+    path : PathDict = sample_trajectory(env, agent.actor,max_path_length)
+
+    ###in somekind of loop, like episode step
+    action = agent.actor.get_action(observation)
+    next_ob, reward, done = env.step(action)
+    agent.add_to_replay_buffer (action,add_sl_noise=True)# T: shoud add the whole paths instead of action
+
+    score += reward
+
+    for itr in range (n_iter):
+        print("\n\n********** Iteration %i ************"%itr)
+        if itr == 0:
+                use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer)
+
+        use_batchsize =  8000 ##steps collected per train iteration (put into replay buffer)
+
+        agent.actor """
 
 
     
