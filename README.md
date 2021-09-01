@@ -4,4 +4,6 @@ Dependencies:
   ros-rl-env
  
  
- under developed
+run: 
+1/ the navigation rl environment
+2/ rosrun rl_move_base turtlebot3_mbrl.py
