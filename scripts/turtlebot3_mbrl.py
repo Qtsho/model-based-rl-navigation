@@ -83,7 +83,7 @@ def sample_trajectory(env, policy, max_path_length):
         ac = policy.get_action(ob)
         acs.append(ac)
         ob, rew, done, _ = env.step(ac)
-        print(done)
+       
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
         rewards.append(rew)
@@ -91,6 +91,7 @@ def sample_trajectory(env, policy, max_path_length):
         # If the episode ended, the corresponding terminal value is 1
         # otherwise, it is 0
         if done or steps > max_path_length:
+            print('Done!!')
             terminals.append(1)
             break
         else:
@@ -108,7 +109,7 @@ def sample_trajectories(env, policy, min_timestep_perbatch, max_path_length):
         path = sample_trajectory(env, policy, max_path_length) # a path should reach done flag or more than max_path_lenght
         paths.append(path)
         time_step_this_batch += path["observation"].shape[0] #take the  dict key observation, then the size of it first dimension
-    print('time stpe this batch',time_step_this_batch)
+        print('time step this batch: ',time_step_this_batch)
 
     return paths, time_step_this_batch
 
@@ -325,7 +326,8 @@ class FFModel(nn.Module):
             n_layers=self.n_layers,
             size=self.size,
         )
-        self.delta_network.to(device)
+        self.delta_network.to(device) # send the network to device  allocate to GPU or CPU
+
         self.optimizer = optim.Adam(
             self.delta_network.parameters(),
             self.learning_rate,
@@ -338,6 +340,11 @@ class FFModel(nn.Module):
         self.delta_mean = None
         self.delta_std = None
 
+    def save(self, filepath):
+        T.save(self.state_dict(), filepath)
+
+    def restore(self, filepath):
+        self.load_state_dict(T.load(filepath))
 
     def forward(
             self,
@@ -431,7 +438,7 @@ class FFModel(nn.Module):
              - 'delta_std'
         :return:
         """
-        print()
+        
         observations = from_numpy(observations)
         actions = from_numpy(actions)
         next_observations = from_numpy(next_observations)
@@ -457,10 +464,8 @@ class FFModel(nn.Module):
             data_statistics['delta_mean'],
             data_statistics['delta_std'],
         )
-        loss = self.loss(target, pred_delta) # TODO(Q1) compute the loss
-        # Hint: `self(...)` returns a tuple, but you only need to use one of the
-        # outputs.
-
+        loss = self.loss(target, pred_delta) 
+        
         self.optimizer.zero_grad()
         loss.backward() #gradient decent on the loss
         self.optimizer.step()
@@ -495,8 +500,8 @@ class MPCPolicy():
         self.ac_dim = ac_dim
         # self.low = self.ac_space.low # min action
         # self.high = self.ac_space.high #max action
-        self.low = 0
-        self.high = 5
+        self.low = -0.5 # m/s,angular/s
+        self.high = 0.5# m/s, angular/s
     
     def sample_action_sequences(self, num_sequences, horizon): 
         #  uniformly sample trajectories and return an array of
@@ -508,7 +513,7 @@ class MPCPolicy():
     def get_action(self, obs):
 
         if self.data_statistics is None:
-            print("WARNING: performing random actions.",self.sample_action_sequences(num_sequences=1, horizon=1)[0][0])
+            print("WARNING: performing random actions.",self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]) #(low, high, size), still MPC but random
             return self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]
 
         # sample random actions (N x horizon)
@@ -525,12 +530,12 @@ class MPCPolicy():
         # calculate mean_across_ensembles(predicted rewards)
         predicted_rewards = np.mean(
             predicted_sum_of_rewards_per_model, axis=0)  # [ens, N] --> N
-
+        
         # pick the action sequence and return the 1st element of that sequence
         best_action_sequence = candidate_action_sequences[predicted_rewards.argmax()]
         action_to_take = best_action_sequence[0] # first index of the best action sequence
         
-        print("Best Action to take:",action_to_take[None])
+        print ('most optimize actions: ', action_to_take )
         return action_to_take  # Unsqueeze the first index? do we need unsqeezing= adding 1 dim
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model: FFModel):
@@ -575,7 +580,7 @@ class MPCPolicy():
                     pred_obs[:, t],
                     candidate_action_sequences[:, t],
                     self.data_statistics,
-                )
+                )# this calculate rewards/predict the whole next observations across all sequences at time step t. Cool?
 
         sum_of_rewards = rewards.sum(axis=1) #sum across the horizon
         assert sum_of_rewards.shape == (N,) #1D array with total reward accross multiple actions sequences.
@@ -584,7 +589,9 @@ class MPCPolicy():
 
 class ReinforceAgent():
     def __init__(self, env, action_size, state_size):
-        
+        self.Path = os.path.dirname(os.path.realpath(__file__))
+        self.resultPATH = self.Path.replace('rl_move_base/scripts', 'rl_move_base/scripts/trainning_result/result.csv')
+        self.modelPATH = self.Path.replace('rl_move_base/scripts', 'rl_move_base/scripts/trainning_result/models/model_')
         self.ensemble_size = 3
         self.load_episode = 0
         #T: ensemble, create multiple dynamics NN
@@ -604,8 +611,8 @@ class ReinforceAgent():
             self.env,
             ac_dim= 2,#(v,w)
             dyn_models =self.dyn_models,
-            horizon = 10, #mpc_horizon
-            N = 1000, #mpc_num_action_sequences
+            horizon = 5, #mpc_horizon
+            N = 100, #mpc_num_action_sequences
         ) 
         
         self.replay_buffer = ReplayBuffer()
@@ -624,9 +631,9 @@ class ReinforceAgent():
             # you might find the num_data_per_ens variable defined above useful
             finish = start + num_data_per_ens
 
-            observations = ob_no[start:finish] # TODO(Q1)
-            actions = ac_na[start:finish] # TODO(Q1)
-            next_observations = next_ob_no[start:finish] # TODO(Q1)
+            observations = ob_no[start:finish] 
+            actions = ac_na[start:finish] 
+            next_observations = next_ob_no[start:finish] 
 
             # use datapoints to update one of the dyn_models
             loss = model.update(observations, actions, next_observations, self.data_statistics)
@@ -635,6 +642,7 @@ class ReinforceAgent():
             start = finish
 
         avg_loss = np.mean(losses)
+        print ('avg Loss between essemble: ',avg_loss)
         return avg_loss
 
     def add_to_replay_buffer(self, paths, add_sl_noise=False): #~ store_trasition, update statistics
@@ -675,8 +683,8 @@ if __name__ == '__main__':
 
     """Parameters"""
     n_iter=  20 #number of (dagger) iterations
-    num_agent_train_steps_per_iter= 10#1000
-    train_batch_size = 3 ##steps used per gradient step (used for training) 512
+    num_agent_train_steps_per_iter= 100 #1000
+    train_batch_size = 51 ##steps used per gradient step (used for training) 512
 
     """Env, agent objects initialization"""
     env = Env(action_size) 
@@ -688,23 +696,41 @@ if __name__ == '__main__':
     for itr in tqdm(range(n_iter)):
         if itr % 1 == 0:
             print("\n\n********** Iteration %i ************"%itr)
+        use_batchsize = 80 #steps collected per train iteration (put into replay buffer) 8000
+        if itr==0:
+            use_batchsize = 200 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
 
-        paths, envsteps_this_batch = sample_trajectories(env, agent.actor, min_timestep_perbatch= 5, max_path_length= 100)
+
+        paths, envsteps_this_batch = sample_trajectories(env, agent.actor, min_timestep_perbatch = use_batchsize , max_path_length= 200)
         #add the paths to the replay buffer with noise
         agent.add_to_replay_buffer(paths, True)
     
-        for train_step in range(num_agent_train_steps_per_iter):
+        for train_step in tqdm(range(num_agent_train_steps_per_iter)): # train m,
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
-            all_logs.append(train_log)
+            # with open(agent.resultPATH, 'a') as f:
+            # # create the csv writer
+            #     writer = csv.writer(f)
+            #     # write a row to the csv file
+            #     writer.writerow(train_log)
+            # f.close()
+            all_logs.append(train_log) # = # of iterration * # of train steps.
+        
+        
     
     print(all_logs)
+    csvRow = all_logs
+    with open(agent.resultPATH, 'a') as f:
+           # create the csv writer
+           writer = csv.writer(f)
+           # write a row to the csv file
+           writer.writerow(csvRow)
+    f.close()
 
-        
 
-
-    #TODO: Log model prediction
+    #TODO: Log model prediction in csv, plot the loss through time. 
+    #TODO: collect data for evaluation
         
 
 

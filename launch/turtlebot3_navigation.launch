@@ -3,10 +3,10 @@
   <!-- Arguments -->
   <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
   <arg name="stage" default= "stage4"/>
-  <arg name="map_file" default="$(find rl_move_base)/maps/stage4.yaml"/>
+  <arg name="map_file" default="$(find rl_move_base)/maps/4.yaml"/>
   <arg name="open_rviz" default="true"/>
   <arg name="move_forward_only" default="false"/>
-  <arg name="cmd_vel_topic" default="cmd_vel" />
+  <arg name="cmd_vel_topic" default="cmd_vel_move_base" />
   <arg name="odom_topic" default="odom" />
   
 
@@ -19,7 +19,7 @@
 
   <!-- move_base -->
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-    <!--param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" /-->
+    <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
     <rosparam file="$(find rl_move_base)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find rl_move_base)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
     <rosparam file="$(find rl_move_base)/params/local_costmap_params.yaml" command="load" />
@@ -38,3 +38,6 @@
           args="-d $(find rl_move_base)/rviz/rviz.rviz"/>
   </group>
 </launch>
+
+
+

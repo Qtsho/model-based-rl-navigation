@@ -16,7 +16,7 @@
 #################################################################################
 
 # Authors: Gilbert #
-## change this respawn goal to fit with local planner and MPC
+
 import rospy
 import random
 import time
@@ -25,9 +25,10 @@ from gazebo_msgs.srv import SpawnModel, DeleteModel
 from gazebo_msgs.msg import ModelStates
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
-
+from nav_msgs.msg import Path
 #add movebase goal
 import actionlib
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 class Respawn():
@@ -39,10 +40,11 @@ class Respawn():
         self.model = self.f.read()
         self.stage = 4
         self.goal_position = Pose()
-        self.init_goal_x = 0.6
+        self.init_goal_x = 0.0
         self.init_goal_y = 0.0
         self.goal_position.position.x = self.init_goal_x
         self.goal_position.position.y = self.init_goal_y
+   
         self.modelName = 'goal'
         self.obstacle_1 = 0.6, 0.6
         self.obstacle_2 = 0.6, -0.6
@@ -52,17 +54,35 @@ class Respawn():
         self.last_goal_y = self.init_goal_y
         self.last_index = 0
         self.sub_model = rospy.Subscriber('gazebo/model_states', ModelStates, self.checkModel)
-        
-        #rospy.init_node("mynode")
-        self.goal_publisher = rospy.Publisher("move_base_simple/goal", PoseStamped, queue_size=5)
-
+        self.goal_subscriber= rospy.Subscriber('move_base/DWAPlannerROS/local_plan', Path, self.getGoal)
         self.client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
         self.check_model = False
         self.index = 0
         self.pubGoal = False
+    #subscribe to goal(local/global), should be similar to getPostion():
+    #TODO: get global plan too, only set flag done in the env when reach the global plan.
+        self.local_goal_x = 0
+        self.local_goal_y = 0
+        self.local_goal_theta= 0
+    def getGoal (self, msg):
+        
+        self.local_goal_x = msg.poses[1].pose.position.x
+        self.local_goal_y = msg.poses[1].pose.position.y
+        eta = msg.poses[1].pose.orientation.w
+        epsilonx =msg.poses[1].pose.orientation.x
+        epsilony = msg.poses[1].pose.orientation.y
+        epsilonz = msg.poses[1].pose.orientation.z
+        eulerangles= euler_from_quaternion([epsilonx,epsilony,epsilonz,eta])
 
 
-
+        self.local_goal_theta= eulerangles[0]
+        numofPose= len(msg.poses)
+       
+        print ("poses: ",numofPose) 
+        for i in range(8): 
+            print("Path", i,": " ,msg.poses[i].pose.position.y)
+        
+        
     def checkModel(self, model):
         self.check_model = False
         for i in range(len(model.name)):
@@ -92,6 +112,9 @@ class Respawn():
                 pass
 
     def getPosition(self, position_check=False, delete=False):
+
+        #position_check: check if overlape the old position
+        #delete: delete the old model
         if delete:
             self.deleteModel()
 
