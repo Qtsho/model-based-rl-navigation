@@ -683,8 +683,8 @@ if __name__ == '__main__':
 
     """Parameters"""
     n_iter=  20 #number of (dagger) iterations
-    num_agent_train_steps_per_iter= 100 #1000
-    train_batch_size = 51 ##steps used per gradient step (used for training) 512
+    num_agent_train_steps_per_iter= 1000 #1000
+    train_batch_size = 512 ##steps used per gradient step (used for training) 512
 
     """Env, agent objects initialization"""
     env = Env(action_size) 
@@ -696,9 +696,9 @@ if __name__ == '__main__':
     for itr in tqdm(range(n_iter)):
         if itr % 1 == 0:
             print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 80 #steps collected per train iteration (put into replay buffer) 8000
+        use_batchsize = 800 #steps collected per train iteration (put into replay buffer) 8000
         if itr==0:
-            use_batchsize = 200 #(random) steps collected on 1st iteration (put into replay buffer) 20000
+            use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
 
 
