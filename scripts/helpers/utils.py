@@ -1,6 +1,3 @@
-
-
- 
 import rospy
 import os
 import numpy as np
@@ -270,11 +267,3 @@ def normalize(data, mean, std, eps=1e-8):
 def unnormalize(data, mean, std):
     return data*std+mean
 
-
-'''RL CLASSES
-    replay buffer
-    FFmodel
-    MPC policy
-    Reinforce Agent
-    main()
-'''

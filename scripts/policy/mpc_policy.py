@@ -61,7 +61,7 @@ class MPCPolicy():
         best_action_sequence = candidate_action_sequences[predicted_rewards.argmax()]
         action_to_take = best_action_sequence[0] # first index of the best action sequence
         
-        print ('most optimize actions: ', action_to_take )
+        #print ('most optimize actions: ', action_to_take )
         return action_to_take  # Unsqueeze the first index? do we need unsqeezing= adding 1 dim
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model):

@@ -141,7 +141,7 @@ class Env():
         
      
         observations = np.array([heading, self.local_distance])
-        print('Observation [heading2Goal, distance2Goal]:',observations)
+        # print('Observation [heading2Goal, distance2Goal]:',observations)
         return observations, done
 
     def step(self, action):

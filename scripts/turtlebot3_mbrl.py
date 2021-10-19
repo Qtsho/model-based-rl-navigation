@@ -13,7 +13,7 @@ if __name__ == '__main__':
     all_logs = []
 
     """Parameters"""
-    n_iter=  1
+    n_iter=  10
     num_agent_train_steps_per_iter= 100 #1000
     train_batch_size = 512 ##steps used per gradient step (used for training) 512
     action_size = 2 
@@ -29,9 +29,9 @@ if __name__ == '__main__':
     for itr in tqdm(range(n_iter)):
         if itr % 1 == 0:
             print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 80
+        use_batchsize = 8000
         if itr==0:
-            use_batchsize = 200 #(random) steps collected on 1st iteration (put into replay buffer) 20000
+            use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
 
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         
         ###START TRAINING 
         env.pause()
-        for train_step in tqdm(range(num_agent_train_steps_per_iter)): # train m,
+        for train_step in range(num_agent_train_steps_per_iter): # train m,
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             # with open(agent.resultPATH, 'a') as f:
