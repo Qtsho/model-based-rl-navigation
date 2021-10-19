@@ -49,7 +49,7 @@ if __name__ == '__main__':
             #     # write a row to the csv file
             #     writer.writerow(train_log)
             # f.close()
-            all_logs.append(train_log) # = # of iterration * # of train steps.
+            all_logs.append(train_log) 
         env.unpause()
 
     #TODO: validation
