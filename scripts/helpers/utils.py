@@ -76,7 +76,7 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
 
     true_states = Path(obs, acs, rewards, next_obs, terminals)
     #Predict state
-    ob = np.expand_dims(true_states["observation"], 0)
+    ob = np.expand_dims(true_states["observation"][0], 0)
     pred_states = []
     for ac in action_sequence:
         pred_states.append(ob)
@@ -85,9 +85,10 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
     pred_states = np.squeeze(pred_states)
 
     # mpe
-    mpe = np.mean((pred_states- true_states)**2)
+    mpe = np.mean((pred_states- true_states["observation"])**2)
 
     return mpe, true_states, pred_states
+
 def Path(
     obs: List[np.ndarray],
     acs: List[np.ndarray],

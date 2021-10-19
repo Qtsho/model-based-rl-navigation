@@ -68,13 +68,10 @@ class FFModel(nn.Module):
         # normalize input data to mean 0, std 1
         obs_normalized = normalize (obs_unnormalized, obs_mean, obs_std)
         acs_normalized = normalize (acs_unnormalized, acs_mean,acs_std)
-
+        print ('shape obs to predict:', obs_normalized.shape )
+        print ('shape action to predict:', acs_normalized.shape )
         # predicted change in obs
         concatenated_input = T.cat([obs_normalized, acs_normalized], dim=1) # (s,a)
-
-        # TODO(Q1) compute delta_pred_normalized and next_obs_pred
-        # Hint: as described in the PDF, the output of the network is the
-        # *normalized change* in state, i.e. normalized(s_t+1 - s_t).
         delta_pred_normalized = self.delta_network(concatenated_input) #delta t+1
 
         next_obs_pred = obs_unnormalized + unnormalize (delta_pred_normalized, delta_mean, delta_std)

@@ -235,17 +235,17 @@ class Env():
         return state
      
 
-    # def pause(self):
-    #     rospy.wait_for_service('gazebo/pause_physics')
-    #     try:
-    #         self.pause_proxy()
-    #     except (rospy.ServiceException) as e:
-    #         print("gazebo/pause_physics service call failed")
-    # #later added funtion: unpause the simulation
-    # def unpause (self):
-    #     rospy.wait_for_service('gazebo/unpause_physics')
-    #     try:
-    #         self.unpause_proxy()
-    #     except (rospy.ServiceException) as e:
-    #         print("gazebo/unpause_physics service call failed")
+    def pause(self):
+        rospy.wait_for_service('gazebo/pause_physics')
+        try:
+            self.pause_proxy()
+        except (rospy.ServiceException) as e:
+            print("gazebo/pause_physics service call failed")
+    #later added funtion: unpause the simulation
+    def unpause (self):
+        rospy.wait_for_service('gazebo/unpause_physics')
+        try:
+            self.unpause_proxy()
+        except (rospy.ServiceException) as e:
+            print("gazebo/unpause_physics service call failed")
 

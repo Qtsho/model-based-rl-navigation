@@ -76,7 +76,7 @@ class ReplayBuffer(object):
                 recent_rollout = self.paths[index]
                 index -=1
                 num_recent_rollouts_to_return +=1
-                num_datapoints_so_far += utils.get_pathlength(recent_rollout)
+                num_datapoints_so_far += get_pathlength(recent_rollout)
             rollouts_to_return = self.paths[-num_recent_rollouts_to_return:]
             observations, actions, next_observations, terminals, concatenated_rews, unconcatenated_rews = convert_listofrollouts(rollouts_to_return)
             return observations, actions, unconcatenated_rews, next_observations, terminals
@@ -86,8 +86,9 @@ class ReplayBuffer(object):
 class ReinforceAgent():
     def __init__(self, env, action_size, state_size):
         self.Path = os.path.dirname(os.path.realpath(__file__))
-        self.resultPATH = self.Path.replace('rl_move_base/scripts', 'rl_move_base/scripts/trainning_result/result.csv')
-        self.modelPATH = self.Path.replace('rl_move_base/scripts', 'rl_move_base/scripts/trainning_result/models/model_')
+        self.resultPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/result.csv')
+        self.modelPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/models/model_')
+        self.figPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/figures')
         self.ensemble_size = 3
         self.load_episode = 0
         #T: ensemble, create multiple dynamics NN
