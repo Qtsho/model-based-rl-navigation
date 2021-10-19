@@ -12,12 +12,13 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from std_srvs.srv import Empty
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
+
 # from respawnGoal import Respawn
 planner = False
 if planner:
-    from respawnPlannerGoal import Respawn
+    from env.respawnPlannerGoal import Respawn
 else:
-    from respawnGoal import Respawn
+    from env.respawnGoal import Respawn
     
 class Env():
     def __init__(self, action_size):
@@ -95,6 +96,13 @@ class Env():
 
 
     def _get_obs(self):
+        data = None
+        while data is None:
+            try:
+                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+            except:
+                print ("Error while waiting laser message!")
+                pass
     
         heading = self.heading # update when ever get odometry
         self.obs_dict = {}
@@ -106,16 +114,8 @@ class Env():
             self.goal_local_y = self.respawn_goal.local_goal_y #change every new local goal available
  
         self.local_distance  = self.getGoalDistace(self.goal_local_x, self.goal_local_y)
-
-        data = None
         done = 0
-
-        while data is None:
-            try:
-                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
-            except:
-                print ("Error while waiting laser message!")
-                pass
+            
         scan_range = []
         for i in range(len(data.ranges)):
             if data.ranges[i] == float('Inf'):
@@ -145,7 +145,7 @@ class Env():
         return observations, done
 
     def step(self, action):
-       
+        
         linear = action[0]
         angular = action[1]
         #step
@@ -153,7 +153,10 @@ class Env():
         vel_cmd.linear.x = linear
         vel_cmd.angular.z = angular
         self.pub_cmd_vel.publish(vel_cmd)
-
+        
+        #must wait for the simulation to have next data to ge the next obs:
+        data = None
+        
         #obs/reward/done/score
         ob, done = self._get_obs()
         rew = self.getReward(ob, action)

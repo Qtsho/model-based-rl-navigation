@@ -1,28 +1,26 @@
-from T import nn
-import T
-from T import optim
-from models.base_model import BaseModel
-from infrastructure.utils import normalize, unnormalize
-from infrastructure import pyT_util as ptu
+from scripts import *
+from helpers.utils import *
 
 
-class FFModel(nn.Module, BaseModel):
+class FFModel(nn.Module):
 
     def __init__(self, ac_dim, ob_dim, n_layers, size, learning_rate=0.001):
-        super(FFModel, self).__init__()
+        super(FFModel, self).__init__() #init NN torch parent class.
 
         self.ac_dim = ac_dim
         self.ob_dim = ob_dim
         self.n_layers = n_layers
         self.size = size
         self.learning_rate = learning_rate
-        self.delta_network = ptu.build_mlp(
-            input_size=self.ob_dim + self.ac_dim,
+
+        self.delta_network = build_mlp(
+            input_size= self.ob_dim + self.ac_dim,
             output_size=self.ob_dim,
             n_layers=self.n_layers,
             size=self.size,
         )
-        self.delta_network.to(ptu.device)
+        self.delta_network.to(device) # send the network to device  allocate to GPU or CPU
+
         self.optimizer = optim.Adam(
             self.delta_network.parameters(),
             self.learning_rate,
@@ -35,21 +33,11 @@ class FFModel(nn.Module, BaseModel):
         self.delta_mean = None
         self.delta_std = None
 
-    def update_statistics(
-            self,
-            obs_mean,
-            obs_std,
-            acs_mean,
-            acs_std,
-            delta_mean,
-            delta_std,
-    ):
-        self.obs_mean = ptu.from_numpy(obs_mean)
-        self.obs_std = ptu.from_numpy(obs_std)
-        self.acs_mean = ptu.from_numpy(acs_mean)
-        self.acs_std = ptu.from_numpy(acs_std)
-        self.delta_mean = ptu.from_numpy(delta_mean)
-        self.delta_std = ptu.from_numpy(delta_std)
+    def save(self, filepath):
+        T.save(self.state_dict(), filepath)
+
+    def restore(self, filepath):
+        self.load_state_dict(T.load(filepath))
 
     def forward(
             self,
@@ -90,6 +78,7 @@ class FFModel(nn.Module, BaseModel):
         delta_pred_normalized = self.delta_network(concatenated_input) #delta t+1
 
         next_obs_pred = obs_unnormalized + unnormalize (delta_pred_normalized, delta_mean, delta_std)
+
         return next_obs_pred, delta_pred_normalized
 
 
@@ -107,15 +96,15 @@ class FFModel(nn.Module, BaseModel):
              - 'delta_std'
         :return: a numpy array of the predicted next-states (s_t+1)
         """
-        obs = ptu.from_numpy(obs)
-        acs = ptu.from_numpy(acs)
-        data_statistics = {key: ptu.from_numpy(value) for key, value in
-                           data_statistics.items()}
+
+        obs = from_numpy(obs)
+        acs = from_numpy(acs)
+        data_statistics = {key: from_numpy(value) for key, value in data_statistics.items()}
 
         # get numpy array of the predicted next-states (s_t+1)
         # Hint: `self(...)` returns a tuple, but you only need to use one of the
-        # outputs.
-        prediction, _ = self(
+        # outputs. This is similar to self.forward(state...)
+        prediction, _ = self( #next_obs_pred
             obs,
             acs,
             data_statistics['obs_mean'],
@@ -142,6 +131,12 @@ class FFModel(nn.Module, BaseModel):
              - 'delta_std'
         :return:
         """
+        
+        observations = from_numpy(observations)
+        actions = from_numpy(actions)
+        next_observations = from_numpy(next_observations)
+        data_statistics = {key: from_numpy(value) for key, value in
+                           data_statistics.items()}
         target = normalize(
             next_observations - observations,
             data_statistics['delta_mean'],
@@ -152,7 +147,7 @@ class FFModel(nn.Module, BaseModel):
         # and standard deviation of the model.
 
 
-        _, pred_delta = self(
+        _, pred_delta = self( #delta_pred_normalized
             observations,
             actions,
             data_statistics['obs_mean'],
@@ -162,14 +157,12 @@ class FFModel(nn.Module, BaseModel):
             data_statistics['delta_mean'],
             data_statistics['delta_std'],
         )
-        loss =self.loss(pred_delta, target) # TODO(Q1) compute the loss
-        # Hint: `self(...)` returns a tuple, but you only need to use one of the
-        # outputs.
-
+        loss = self.loss(target, pred_delta) 
+        
         self.optimizer.zero_grad()
         loss.backward() #gradient decent on the loss
         self.optimizer.step()
 
-        return {
-            'Training Loss': ptu.to_numpy(loss),
-        }
+        return to_numpy(loss)
+
+# MPC class, apply action sequences and choose first action of the best action sequences that maximize the reward function.
