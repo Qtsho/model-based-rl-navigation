@@ -110,8 +110,12 @@ def sample_trajectory(env, policy, max_path_length):
     ob = env.reset()
     obs, acs, rewards, next_obs, terminals  = [], [], [], [], []
     steps = 0
+    start = 0
     while True:
+        end = time.time()
+        print('Time between two steps: ', end-start)
         start = time.time()
+
         obs.append(ob)
         ac = policy.get_action(ob)
         acs.append(ac)
@@ -121,8 +125,8 @@ def sample_trajectory(env, policy, max_path_length):
         next_obs.append(ob)
         rewards.append(rew)
         steps += 1
-        end = time.time()
-        print('Time between two steps: ', start-end)
+        
+        
         # If the episode ended, the corresponding terminal value is 1
         # otherwise, it is 0
         if done or steps > max_path_length:

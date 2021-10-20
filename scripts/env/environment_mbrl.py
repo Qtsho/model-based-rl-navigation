@@ -43,13 +43,16 @@ class Env():
         self.unpause_proxy = rospy.ServiceProxy('gazebo/unpause_physics', Empty)
         self.pause_proxy = rospy.ServiceProxy('gazebo/pause_physics', Empty)
         self.respawn_goal = Respawn()
-        self.min_range_to_reach_goal = 0.01  # goal range
+        self.min_range_to_reach_goal = 0.1  # goal range
         self.min_range_to_collision = 0.13 #collision range r
 
         #local goal
         self.local_distance  = 0 
         self.goal_local_x  = 0 
         self.goal_local_y  = 0
+
+
+        self.obs_dict = {}
 
 
     def getGoalDistace(self, goal_x, goal_y): #can be used for local and global goal. an for random position
@@ -95,7 +98,7 @@ class Env():
             self.heading = round(heading, 2)
 
 
-    def _get_obs(self):
+    def _get_obs(self): #convert raw states to heading and current distance to goal. Inlcude done flag
         data = None
         while data is None:
             try:
@@ -104,18 +107,10 @@ class Env():
                 print ("Error while waiting laser message!")
                 pass
     
-        heading = self.heading # update when ever get odometry
-        self.obs_dict = {}
-        self.obs_dict['position'] = np.append(self.position, self.heading)
-        # current_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y),2)
-        current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)
-        if (self.usedAMCL):
-            self.goal_local_x = self.respawn_goal.local_goal_x #change every new local goal available
-            self.goal_local_y = self.respawn_goal.local_goal_y #change every new local goal available
- 
-        self.local_distance  = self.getGoalDistace(self.goal_local_x, self.goal_local_y)
+        
+        
+        current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)    
         done = 0
-            
         scan_range = []
         for i in range(len(data.ranges)):
             if data.ranges[i] == float('Inf'):
@@ -124,23 +119,26 @@ class Env():
                 scan_range.append(0)
             else:
                 scan_range.append(data.ranges[i])
-
         
         if self.min_range_to_collision > min(scan_range) > 0: #obstacle
             done = 1
             print('Reset because of collision')
 
-        if (current_distance <self.min_range_to_reach_goal):#TODO: update only done when reach globl goal
+        if (current_distance <self.min_range_to_reach_goal):#TODO: update only done when reach global goal
             self.get_goalbox = True
-            rospy.loginfo("Goal!!")
-            # self.reward_dict['distance reward']  = 1000
-            self.pub_cmd_vel.publish(Twist()) # stop
-            self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
-            self.goal_distance = self.getGoalDistace(self.goal_x,self.goal_y)
-            self.get_goalbox = False    
-        
+            
      
-        observations = np.array([heading, self.local_distance])
+        observations = np.array([self.heading, current_distance])
+
+        
+
+        if (self.usedAMCL):
+            self.goal_local_x = self.respawn_goal.local_goal_x #change every new local goal available
+            self.goal_local_y = self.respawn_goal.local_goal_y #change every new local goal available
+            self.local_distance  = self.getGoalDistace(self.goal_local_x, self.goal_local_y)
+            observations = np.array([self.heading, self.local_distance])
+
+        self.obs_dict['observation'] = observations
         # print('Observation [heading2Goal, distance2Goal]:',observations)
         return observations, done
 
@@ -189,6 +187,13 @@ class Env():
             local_distance_rate = -(2 ** (current_distance / self.local_distance))
             self.reward_dict['local distance reward'] = local_distance_rate
         angular_reward= 0
+        if (self.get_goalbox== True):
+            rospy.loginfo("Goal!!")
+            #self.reward_dict['distance reward']  = 1000
+            self.pub_cmd_vel.publish(Twist()) # stop
+            self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
+            self.goal_distance = self.getGoalDistace(self.goal_x,self.goal_y)
+            self.get_goalbox = False
 
         #TODO: reward funtion
         self.reward_dict['distance reward'] = distance_rate
