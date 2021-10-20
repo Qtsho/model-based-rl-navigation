@@ -6,7 +6,7 @@ from policy.mpc_policy import MPCPolicy
 class ReinforceAgent():
     def __init__(self, env, action_size, state_size):
         self.Path = os.path.dirname(os.path.realpath(__file__))
-        self.resultPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/result.csv')
+        self.resultPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result')
         self.modelPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/models/model_')
         self.figPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/figures')
         self.ensemble_size = 3
@@ -59,7 +59,7 @@ class ReinforceAgent():
             start = finish
 
         avg_loss = np.mean(losses)
-        print ('avg Loss between essemble: ',avg_loss)
+        #print ('avg Loss between essemble: ',avg_loss)
         return avg_loss
 
     def add_to_replay_buffer(self, paths, add_sl_noise=False): #~ store_trasition, update statistics

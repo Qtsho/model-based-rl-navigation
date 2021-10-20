@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-# Authors: Tien Tran, adapted  and cs285 RL course
+# Authors: Tien Tran,
 # mail: quang.tran@fh-dortmund.de
 
 from scripts import *
 from helpers.utils import * 
 from agent.agent import ReinforceAgent
-
 
 if __name__ == '__main__':
     rospy.init_node('turtlebot3_mbrl')
@@ -14,7 +13,7 @@ if __name__ == '__main__':
 
     """Parameters"""
     n_iter=  10
-    num_agent_train_steps_per_iter= 100 #1000
+    num_agent_train_steps_per_iter= 1000 #1000
     train_batch_size = 512 ##steps used per gradient step (used for training) 512
     action_size = 2 
     observation_size = 2 # heading, current distance
@@ -29,7 +28,7 @@ if __name__ == '__main__':
     for itr in tqdm(range(n_iter)):
         if itr % 1 == 0:
             print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 8000
+        use_batchsize = 800
         if itr==0:
             use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
@@ -40,7 +39,8 @@ if __name__ == '__main__':
         
         ###START TRAINING 
         env.pause()
-        for train_step in range(num_agent_train_steps_per_iter): # train m,
+        print("Trainning the model....")
+        for train_step in range(num_agent_train_steps_per_iter):  
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             # with open(agent.resultPATH, 'a') as f:
@@ -50,35 +50,45 @@ if __name__ == '__main__':
             #     writer.writerow(train_log)
             # f.close()
             all_logs.append(train_log) 
+        #TODO save model
         env.unpause()
 
     #TODO: validation
     fig = plt.figure()
     print ("Collect data to validate...")
-    action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=5) 
+    action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=15) 
     action_sequence = action_sequence[0]
     print(action_sequence)
     mpe, true_states, pred_states = calculate_mean_prediction_error(env, action_sequence, agent.dyn_models, agent.actor.data_statistics)
     for i in range(agent.dyn_models[0].ob_dim):
         plt.subplot(agent.dyn_models[0].ob_dim/2, 2, i+1)
-        plt.plot(true_states["observation"][i], 'g')
-        plt.plot(pred_states[:,i], 'r')
+        plt.plot(true_states["observation"][:,i], 'g', label='Ground Truth')
+        plt.plot(pred_states[:,i], 'r', label='Predicted State')
+        plt.xlabel('Horizon')
+        plt.ylabel('State')
+        plt.legend()
         
     fig.suptitle('MPE: ' + str(mpe))
     fig.show()
-    fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=200, bbox_inches='tight')
+    fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')
         
         
-        
-    
-    print(all_logs)
-    csvRow = all_logs
-    with open(agent.resultPATH, 'a') as f:
-           # create the csv writer
-           writer = csv.writer(f)
-           # write a row to the csv file
-           writer.writerow(csvRow)
-    f.close()
+    #TODO: print losses
+    all_losses = np.array([log for log in all_logs])
+    np.save(agent.resultPATH +'/itr_'+str(itr)+'_losses.npy', all_losses)
+    fig.clf()
+    plt.plot(all_losses)
+    fig.savefig(agent.resultPATH+'/itr_'+str(itr)+'_losses.png', dpi=500, bbox_inches='tight')
+
+
+    # print(all_logs)
+    # csvRow = all_logs
+    # with open(agent.resultPATH, 'a') as f:
+    #        # create the csv writer
+    #        writer = csv.writer(f)
+    #        # write a row to the csv file
+    #        writer.writerow(csvRow)
+    # f.close()
 
 
 
