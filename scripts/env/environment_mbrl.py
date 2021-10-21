@@ -60,7 +60,7 @@ class Env():
         return goal_distance
         
 
-    def getAMCLPose(self, pose):
+    def getAMCLPose(self, pose): #callback
         if (self.usedAMCL):
             self.position = pose.pose.pose.position
             orientation = pose.pose.pose.orientation
@@ -79,7 +79,7 @@ class Env():
         else:
             print('Not use AMCL, instead only odom, set flag to True to use AMCL localization')
 
-    def getOdometry(self, odom):# call back when odometry data is receivee
+    def getOdometry(self, odom):# callback 
         if (not self.usedAMCL):
             self.position = odom.pose.pose.position
             orientation = odom.pose.pose.orientation
@@ -107,9 +107,6 @@ class Env():
                 print ("Error while waiting laser message!")
                 pass
     
-        
-        
-        current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)    
         done = 0
         scan_range = []
         for i in range(len(data.ranges)):
@@ -124,13 +121,13 @@ class Env():
             done = 1
             print('Reset because of collision')
 
+
+        current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)    
         if (current_distance <self.min_range_to_reach_goal):#TODO: update only done when reach global goal
             self.get_goalbox = True
             
      
         observations = np.array([self.heading, current_distance])
-
-        
 
         if (self.usedAMCL):
             self.goal_local_x = self.respawn_goal.local_goal_x #change every new local goal available
@@ -140,6 +137,7 @@ class Env():
 
         self.obs_dict['observation'] = observations
         # print('Observation [heading2Goal, distance2Goal]:',observations)
+        #print ('goal positions:', self.goal_x, self.goal_y)
         return observations, done
 
     def step(self, action):
@@ -178,7 +176,7 @@ class Env():
 
 
         headings = observations[:,0]
-        yaw_rewards = []
+        #yaw_rewards = []
         current_distance = observations [:,1]
         self.reward_dict = {}
 
@@ -186,7 +184,9 @@ class Env():
         if (self.usedAMCL):
             local_distance_rate = -(2 ** (current_distance / self.local_distance))
             self.reward_dict['local distance reward'] = local_distance_rate
-        angular_reward= 0
+
+
+        angular_reward= -headings #DUMMY
         if (self.get_goalbox== True):
             rospy.loginfo("Goal!!")
             #self.reward_dict['distance reward']  = 1000

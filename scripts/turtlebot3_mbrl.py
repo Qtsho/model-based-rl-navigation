@@ -34,7 +34,8 @@ if __name__ == '__main__':
         #TODO: store training trajectories in pickle file: Pkl
 
 
-        paths, envsteps_this_batch = sample_trajectories(env, agent.actor, min_timestep_perbatch = use_batchsize , max_path_length= 200)
+        paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
+                                            min_timestep_perbatch = use_batchsize , max_path_length= 200)
         agent.add_to_replay_buffer(paths, add_sl_noise= True)
         
         ###START TRAINING 
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     #TODO: validation
     fig = plt.figure()
     print ("Collect data to validate...")
-    action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=15) 
+    action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=20) 
     action_sequence = action_sequence[0]
     print(action_sequence)
     mpe, true_states, pred_states = calculate_mean_prediction_error(env, action_sequence, agent.dyn_models, agent.actor.data_statistics)
@@ -68,11 +69,14 @@ if __name__ == '__main__':
         plt.ylabel('State')
         plt.legend()
         
-    fig.suptitle('MPE: ' + str(mpe))
+    fig.suptitle('Mean Prediction Error: ' + str(mpe))
     fig.show()
     fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')
-        
-        
+    
+    #Saving model    
+    T.save(agent.dyn_models[0], agent.model_path +'itr_' +str(itr) +'.pt')
+    print ('Saved model at iteration', str(itr))
+                     
     #TODO: print losses
     all_losses = np.array([log for log in all_logs])
     np.save(agent.resultPATH +'/itr_'+str(itr)+'_losses.npy', all_losses)

@@ -14,12 +14,12 @@ class ReinforceAgent():
         #T: ensemble, create multiple dynamics NN
         self.env = env
         self.dyn_models = []
-        for i in range(self.ensemble_size):
+        for _ in range(self.ensemble_size):
             model = FFModel(
                 action_size,
                 state_size,
                 n_layers = 3,
-                size  = 250, #: dimension of each hidden layer
+                size  = 256, #: dimension of each hidden layer
                 learning_rate = 0.00025,
             )
             self.dyn_models.append(model) # T: create dyn models and append object to list

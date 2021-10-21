@@ -73,8 +73,9 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
 
     true_states = Path(obs, acs, rewards, next_obs, terminals)
     #Predict state
-    ob = np.expand_dims(true_states["observation"][0], 0)
+    ob = np.expand_dims(true_states["observation"][0], 0) #take first state.
     pred_states = []
+    #H steps prediction
     for ac in action_sequence:
         pred_states.append(ob)
         action = np.expand_dims(ac,0)
@@ -92,7 +93,7 @@ def Path(
     rewards: List[np.ndarray],
     next_obs: List[np.ndarray], 
     terminals: List[bool],
-) -> PathDict:
+) -> PathDict: #return annotation,
 
     """
         Take info (separate arrays) from a single rollout
