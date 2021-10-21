@@ -12,9 +12,9 @@ if __name__ == '__main__':
     all_logs = []
 
     """Parameters"""
-    n_iter=  10
+    n_iter= 100
     num_agent_train_steps_per_iter= 1000 #1000
-    train_batch_size = 512 ##steps used per gradient step (used for training) 512
+    train_batch_size = 512 ##steps used per gradient step (training) 512
     action_size = 2 
     observation_size = 2 # heading, current distance
 
@@ -51,32 +51,33 @@ if __name__ == '__main__':
             #     writer.writerow(train_log)
             # f.close()
             all_logs.append(train_log) 
-        #TODO save model
-        env.unpause()
-
-    #TODO: validation
-    fig = plt.figure()
-    print ("Collect data to validate...")
-    action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=20) 
-    action_sequence = action_sequence[0]
-    print(action_sequence)
-    mpe, true_states, pred_states = calculate_mean_prediction_error(env, action_sequence, agent.dyn_models, agent.actor.data_statistics)
-    for i in range(agent.dyn_models[0].ob_dim):
-        plt.subplot(agent.dyn_models[0].ob_dim/2, 2, i+1)
-        plt.plot(true_states["observation"][:,i], 'g', label='Ground Truth')
-        plt.plot(pred_states[:,i], 'r', label='Predicted State')
-        plt.xlabel('Horizon')
-        plt.ylabel('State')
-        plt.legend()
         
-    fig.suptitle('Mean Prediction Error: ' + str(mpe))
-    fig.show()
-    fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')
+        #Saving model and save validation every 10 iteration
+        if itr %10 == 0:    
+            T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
+            print ('Saved model at iteration', str(itr))
+            #TODO: validation
+            fig = plt.figure()
+            print ("Collect data to validate...")
+            action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=20) 
+            action_sequence = action_sequence[0]
+            print(action_sequence)
+            mpe, true_states, pred_states = calculate_mean_prediction_error(env, action_sequence, agent.dyn_models, agent.actor.data_statistics)
+            for i in range(agent.dyn_models[0].ob_dim):
+                plt.subplot(agent.dyn_models[0].ob_dim/2, 2, i+1)
+                plt.plot(true_states["observation"][:,i], 'g', label='Ground Truth')
+                plt.plot(pred_states[:,i], 'r', label='Predicted State')
+                plt.xlabel('Horizon')
+            plt.ylabel('State')
+            plt.legend()
+            
+            fig.suptitle('Mean Prediction Error: ' + str(mpe))
+            fig.show()
+            fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')
+
+        env.unpause()
     
-    #Saving model    
-    T.save(agent.dyn_models[0], agent.model_path +'itr_' +str(itr) +'.pt')
-    print ('Saved model at iteration', str(itr))
-                     
+    env.reset()               
     #TODO: print losses
     all_losses = np.array([log for log in all_logs])
     np.save(agent.resultPATH +'/itr_'+str(itr)+'_losses.npy', all_losses)

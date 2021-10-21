@@ -10,10 +10,14 @@ class ReinforceAgent():
         self.modelPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/models/model_')
         self.figPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/figures')
         self.ensemble_size = 3
-        self.load_episode = 0
+        
         #T: ensemble, create multiple dynamics NN
         self.env = env
         self.dyn_models = []
+        self.load_iteration = 0
+        self.load_model = False 
+
+        
         for _ in range(self.ensemble_size):
             model = FFModel(
                 action_size,
@@ -23,13 +27,23 @@ class ReinforceAgent():
                 learning_rate = 0.00025,
             )
             self.dyn_models.append(model) # T: create dyn models and append object to list
+            
+        if self.load_model:
+            for _ in range(self.ensemble_size):
+                model = T.load(self.modelPATH +'/itr_'+ str(self.load_iteration) + '.pt',map_location ='cpu')
+                
+                self.model.device = 'cpu'
+                self.model.eval()
+                print ("Load model state dict: ", self.model.state_dict())
+                self.dyn_models.append(model)
+            print ("Load model state dict: ", self.dyn_models[0].state_dict())
 
         self.actor = MPCPolicy(
             self.env,
             ac_dim= 2,#(v,w)
             dyn_models =self.dyn_models,
             horizon = 5, #mpc_horizon
-            N = 100, #mpc_num_action_sequences
+            N = 1, #mpc_num_action_sequences
         ) 
         
         self.replay_buffer = ReplayBuffer()

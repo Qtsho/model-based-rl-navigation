@@ -26,8 +26,8 @@ class MPCPolicy():
         self.ac_dim = ac_dim
         # self.low = self.ac_space.low # min action
         # self.high = self.ac_space.high #max action
-        self.low = -0.1 # m/s,angular/s
-        self.high = 0.1# m/s, angular/s
+        self.low = -0.2 # m/s,angular/s
+        self.high = 0.2# m/s, angular/s
     
     def sample_action_sequences(self, num_sequences, horizon): 
         #  uniformly sample trajectories and return an array of
