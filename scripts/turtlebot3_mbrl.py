@@ -53,11 +53,12 @@ if __name__ == '__main__':
             all_logs.append(train_log) 
         
         #Saving model and save validation every 10 iteration
-        if itr %10 == 0:    
+        if (itr % 10 == 0) and (itr != 0):    
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
             print ('Saved model at iteration', str(itr))
-            #TODO: validation
+            # validation
             fig = plt.figure()
+            env.unpause()
             print ("Collect data to validate...")
             action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=20) 
             action_sequence = action_sequence[0]
@@ -70,30 +71,19 @@ if __name__ == '__main__':
                 plt.xlabel('Horizon')
             plt.ylabel('State')
             plt.legend()
-            
             fig.suptitle('Mean Prediction Error: ' + str(mpe))
-            fig.show()
             fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')
-
         env.unpause()
+
+        
     
     env.reset()               
-    #TODO: print losses
+    # Print losses
     all_losses = np.array([log for log in all_logs])
     np.save(agent.resultPATH +'/itr_'+str(itr)+'_losses.npy', all_losses)
     fig.clf()
     plt.plot(all_losses)
     fig.savefig(agent.resultPATH+'/itr_'+str(itr)+'_losses.png', dpi=500, bbox_inches='tight')
-
-
-    # print(all_logs)
-    # csvRow = all_logs
-    # with open(agent.resultPATH, 'a') as f:
-    #        # create the csv writer
-    #        writer = csv.writer(f)
-    #        # write a row to the csv file
-    #        writer.writerow(csvRow)
-    # f.close()
 
 
 
