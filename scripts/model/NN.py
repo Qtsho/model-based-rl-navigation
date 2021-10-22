@@ -12,20 +12,23 @@ class FFModel(nn.Module):
         self.n_layers = n_layers
         self.size = size
         self.learning_rate = learning_rate
-
+        print ("Using: ", T.device('cuda:0' if T.cuda.is_available() else 'cpu'))
+        #define forward pass
         self.delta_network = build_mlp(
             input_size= self.ob_dim + self.ac_dim,
             output_size=self.ob_dim,
             n_layers=self.n_layers,
             size=self.size,
-        )
-        self.delta_network.to(device) # send the network to device  allocate to GPU or CPU
-
+        ).to(T.device('cuda:0' if T.cuda.is_available() else 'cpu')) 
+        
+        #define train operations
         self.optimizer = optim.Adam(
             self.delta_network.parameters(),
             self.learning_rate,
-        )
+        ) # has the param of delta_network
         self.loss = nn.MSELoss()
+        
+        
         self.obs_mean = None
         self.obs_std = None
         self.acs_mean = None
@@ -71,6 +74,8 @@ class FFModel(nn.Module):
         
         # predicted change in obs
         concatenated_input = T.cat([obs_normalized, acs_normalized], dim=1) # (s,a)
+         # send to GPU if it has
+        
         delta_pred_normalized = self.delta_network(concatenated_input) #delta t+1
 
         next_obs_pred = obs_unnormalized + unnormalize (delta_pred_normalized, delta_mean, delta_std)
@@ -93,7 +98,7 @@ class FFModel(nn.Module):
         :return: a numpy array of the predicted next-states (s_t+1)
         """
 
-        obs = from_numpy(obs)
+        obs = from_numpy(obs) #reassignment to move toCUDA
         acs = from_numpy(acs)
         data_statistics = {key: from_numpy(value) for key, value in data_statistics.items()}
 
@@ -153,11 +158,11 @@ class FFModel(nn.Module):
             data_statistics['delta_mean'],
             data_statistics['delta_std'],
         )
-        loss = self.loss(target, pred_delta) 
+        loss = self.loss(target, pred_delta)
         
         self.optimizer.zero_grad()
         loss.backward() #gradient decent on the loss
-        self.optimizer.step()
+        self.optimizer.step()#update the weights
 
         return to_numpy(loss)
 

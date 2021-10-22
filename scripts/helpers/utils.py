@@ -113,8 +113,10 @@ def sample_trajectory(env, policy, max_path_length):
     steps = 0
     start = 0
     while True:
-        end = time.time()
-        print('Time between two steps: ', end-start)
+        #while (end - start) < 1: # sync the loop to 1s
+        #    end = time.time()
+        sync_time = time.time()
+        print('Time between two steps: ', sync_time-start)
         start = time.time()
 
         obs.append(ob)
@@ -215,13 +217,14 @@ def build_mlp(
         in_size = size
     layers.append(nn.Linear(in_size, output_size))
     layers.append(output_activation)
+    #layers = T.nn.ModuleList(layers)
 
     return nn.Sequential(*layers) # sequential container. 
 
 
 
 def init_gpu(use_gpu=True, gpu_id=0):
-    global device
+    global device #not working, not sure why?
     if T.cuda.is_available() and use_gpu:
         device = T.device("cuda:" + str(gpu_id))
         print("Using GPU id {}".format(gpu_id))
@@ -230,12 +233,12 @@ def init_gpu(use_gpu=True, gpu_id=0):
         print("GPU not detected. Defaulting to CPU.")
 
 
-def set_device(gpu_id):
+def set_device(gpu_id): 
     T.cuda.set_device(gpu_id)
 
 #from np to tensor and send to device
 def from_numpy(*args, **kwargs):
-    return T.from_numpy(*args, **kwargs).float().to(device)
+    return T.from_numpy(*args, **kwargs).float().to(T.device('cuda:0' if T.cuda.is_available() else 'cpu'))
 
 #tensor to numpy
 def to_numpy(tensor):

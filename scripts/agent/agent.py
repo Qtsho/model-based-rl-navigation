@@ -32,7 +32,7 @@ class ReinforceAgent():
             for _ in range(self.ensemble_size):
                 model = T.load(self.modelPATH +'/itr_'+ str(self.load_iteration) + '.pt',map_location ='cpu')
                 
-                self.model.device = 'cpu'
+                self.model.device = device
                 self.model.eval()
                 print ("Load model state dict: ", self.model.state_dict())
                 self.dyn_models.append(model)
@@ -43,7 +43,7 @@ class ReinforceAgent():
             ac_dim= 2,#(v,w)
             dyn_models =self.dyn_models,
             horizon = 5, #mpc_horizon
-            N = 1, #mpc_num_action_sequences
+            N = 10, #mpc_num_action_sequences
         ) 
         
         self.replay_buffer = ReplayBuffer()

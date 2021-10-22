@@ -25,6 +25,7 @@ class Env():
         self.goal_x = 0
         self.goal_y = 0
         self.heading = 0
+        self.yaw = 0
         self.action_size = action_size
         self.action_space = np.arange(0,action_size,1)
         self.observation_space = (2,)
@@ -51,7 +52,7 @@ class Env():
         self.goal_local_x  = 0 
         self.goal_local_y  = 0
 
-
+       
         self.obs_dict = {}
 
 
@@ -96,6 +97,7 @@ class Env():
                 heading += 2 * pi
 
             self.heading = round(heading, 2)
+            self.yaw = yaw
 
 
     def _get_obs(self): #convert raw states to heading and current distance to goal. Inlcude done flag
@@ -127,13 +129,13 @@ class Env():
             self.get_goalbox = True
             
      
-        observations = np.array([self.heading, current_distance])
+        observations = np.array([self.yaw, current_distance])
 
         if (self.usedAMCL):
             self.goal_local_x = self.respawn_goal.local_goal_x #change every new local goal available
             self.goal_local_y = self.respawn_goal.local_goal_y #change every new local goal available
             self.local_distance  = self.getGoalDistace(self.goal_local_x, self.goal_local_y)
-            observations = np.array([self.heading, self.local_distance])
+            observations = np.array([self.yaw, self.local_distance])
 
         self.obs_dict['observation'] = observations
         # print('Observation [heading2Goal, distance2Goal]:',observations)
@@ -143,6 +145,8 @@ class Env():
     def step(self, action):
         
         linear = action[0]
+        if linear < 0:
+            linear = 0 #no negative velocity
         angular = action[1]
         #step
         vel_cmd = Twist()
@@ -175,7 +179,7 @@ class Env():
             batch_mode = True
 
 
-        headings = observations[:,0]
+        headings = self.headings
         #yaw_rewards = []
         current_distance = observations [:,1]
         self.reward_dict = {}

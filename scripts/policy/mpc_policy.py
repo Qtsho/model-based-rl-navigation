@@ -34,6 +34,7 @@ class MPCPolicy():
         # dimensions (num_sequences, horizon, self.ac_dim) in the range
         # [self.low, self.high] # TODO RANDOM Shooting
         random_action_sequences = np.random.uniform(self.low, self.high, (num_sequences, horizon, self.ac_dim))
+        #random_action_sequences = round(random_action_sequences,1) limit the action space
         return random_action_sequences
 
     def get_action(self, obs):

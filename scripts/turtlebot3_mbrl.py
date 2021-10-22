@@ -10,7 +10,7 @@ from agent.agent import ReinforceAgent
 if __name__ == '__main__':
     rospy.init_node('turtlebot3_mbrl')
     all_logs = []
-
+    init_gpu(use_gpu=True, gpu_id=0)
     """Parameters"""
     n_iter= 100
     num_agent_train_steps_per_iter= 1000 #1000
@@ -30,7 +30,7 @@ if __name__ == '__main__':
             print("\n\n********** Iteration %i ************"%itr)
         use_batchsize = 800
         if itr==0:
-            use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
+            use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer) 2000
         #TODO: store training trajectories in pickle file: Pkl
 
 
