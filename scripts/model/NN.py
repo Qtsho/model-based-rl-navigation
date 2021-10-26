@@ -100,8 +100,8 @@ class FFModel(nn.Module):
 
         obs = from_numpy(obs) #reassignment to move toCUDA
         acs = from_numpy(acs)
-        data_statistics = {key: from_numpy(value) for key, value in data_statistics.items()}
-
+        data_statistics = {key: from_numpy(value) for key, value in data_statistics.items()} # shift the value to GPU
+        
         # get numpy array of the predicted next-states (s_t+1)
         # Hint: `self(...)` returns a tuple, but you only need to use one of the
         # outputs. This is similar to self.forward(state...)

@@ -23,7 +23,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 EPISODES = 3000
-device = None
+freq = 1 #control frequency
 """Utilities classes and functions"""
 Activation = Union[str, nn.Module] #runtme support for typehint, for the activation function: can be str or nn.Module
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
@@ -47,7 +47,23 @@ class PathDict(TypedDict):
     action: np.ndarray
     next_observation: np.ndarray
     terminal: np.ndarray
+def Path(
+    obs: List[np.ndarray],
+    acs: List[np.ndarray],
+    rewards: List[np.ndarray],
+    next_obs: List[np.ndarray], 
+    terminals: List[bool],
+) -> PathDict: #return annotation,
 
+    """
+        Take info (separate arrays) from a single rollout
+        and return it in a single dictionary
+    """
+    return {"observation" : np.array(obs, dtype=np.float32),
+            "reward" : np.array(rewards, dtype=np.float32),
+            "action" : np.array(acs, dtype=np.float32),
+            "next_observation": np.array(next_obs, dtype=np.float32),
+            "terminal": np.array(terminals, dtype=np.float32)}
 
 def calculate_mean_prediction_error(env, action_sequence, models, data_statistics):
     model = models[0]
@@ -87,24 +103,6 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
 
     return mpe, true_states, pred_states
 
-def Path(
-    obs: List[np.ndarray],
-    acs: List[np.ndarray],
-    rewards: List[np.ndarray],
-    next_obs: List[np.ndarray], 
-    terminals: List[bool],
-) -> PathDict: #return annotation,
-
-    """
-        Take info (separate arrays) from a single rollout
-        and return it in a single dictionary
-    """
-    return {"observation" : np.array(obs, dtype=np.float32),
-            "reward" : np.array(rewards, dtype=np.float32),
-            "action" : np.array(acs, dtype=np.float32),
-            "next_observation": np.array(next_obs, dtype=np.float32),
-            "terminal": np.array(terminals, dtype=np.float32)}
-   
 def sample_trajectory(env, policy, max_path_length):
     '''This wont use render mode-> no imgs_obs'''
     print("sample trajectory until crash or reach max path length")
@@ -112,15 +110,17 @@ def sample_trajectory(env, policy, max_path_length):
     obs, acs, rewards, next_obs, terminals  = [], [], [], [], []
     steps = 0
     start = 0
+    freq = 0.08 #control frequency
     while True:
-        #while (end - start) < 1: # sync the loop to 1s
-        #    end = time.time()
+        end = time.time()
+        while (end - start) < freq: # sync the loop to 1s
+            end = time.time()
         sync_time = time.time()
         print('Time between two steps: ', sync_time-start)
         start = time.time()
 
         obs.append(ob)
-        ac = policy.get_action(ob)
+        ac = policy.get_action(ob) # this take the most time
         acs.append(ac)
         ob, rew, done, _ = env.step(ac)
        
@@ -128,8 +128,6 @@ def sample_trajectory(env, policy, max_path_length):
         next_obs.append(ob)
         rewards.append(rew)
         steps += 1
-        
-        
         # If the episode ended, the corresponding terminal value is 1
         # otherwise, it is 0
         if done or steps > max_path_length:
@@ -211,10 +209,13 @@ def build_mlp(
    
     layers = []
     in_size = input_size # a holder for last layers size
+    
     for _ in range(n_layers):
         layers.append(nn.Linear(in_size, size))
         layers.append(activation)
         in_size = size
+        
+    layers.append(nn.Dropout(0.2)) # add dropout layer prevent overfitting.
     layers.append(nn.Linear(in_size, output_size))
     layers.append(output_activation)
     #layers = T.nn.ModuleList(layers)

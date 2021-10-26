@@ -9,7 +9,7 @@ class ReinforceAgent():
         self.resultPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result')
         self.modelPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/models/model_')
         self.figPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/figures')
-        self.ensemble_size = 3
+        self.ensemble_size = 1
         
         #T: ensemble, create multiple dynamics NN
         self.env = env
@@ -24,7 +24,7 @@ class ReinforceAgent():
                 state_size,
                 n_layers = 3,
                 size  = 256, #: dimension of each hidden layer
-                learning_rate = 0.00025,
+                learning_rate = 0.00025, 
             )
             self.dyn_models.append(model) # T: create dyn models and append object to list
             
@@ -41,9 +41,9 @@ class ReinforceAgent():
         self.actor = MPCPolicy(
             self.env,
             ac_dim= 2,#(v,w)
-            dyn_models =self.dyn_models,
-            horizon = 5, #mpc_horizon
-            N = 10, #mpc_num_action_sequences
+            dyn_models = self.dyn_models,
+            horizon = 1, #mpc_horizon
+            N = 1, #mpc_num_action_sequences
         ) 
         
         self.replay_buffer = ReplayBuffer()

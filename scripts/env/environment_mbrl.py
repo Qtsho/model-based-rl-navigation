@@ -28,7 +28,7 @@ class Env():
         self.yaw = 0
         self.action_size = action_size
         self.action_space = np.arange(0,action_size,1)
-        self.observation_space = (2,)
+        self.observation_space = (3,)
         self.max_scan = 5.5
 
         self.usedAMCL = planner #set this if use AMCL as localization, False will use odometry
@@ -97,7 +97,7 @@ class Env():
                 heading += 2 * pi
 
             self.heading = round(heading, 2)
-            self.yaw = yaw
+            self.yaw = round(yaw, 3)
 
 
     def _get_obs(self): #convert raw states to heading and current distance to goal. Inlcude done flag
@@ -124,12 +124,13 @@ class Env():
             print('Reset because of collision')
 
 
-        current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)    
+        current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)
+            
         if (current_distance <self.min_range_to_reach_goal):#TODO: update only done when reach global goal
             self.get_goalbox = True
             
-     
-        observations = np.array([self.yaw, current_distance])
+    
+        observations = np.array([self.position.x, self.position.y, self.yaw])
 
         if (self.usedAMCL):
             self.goal_local_x = self.respawn_goal.local_goal_x #change every new local goal available
@@ -138,15 +139,15 @@ class Env():
             observations = np.array([self.yaw, self.local_distance])
 
         self.obs_dict['observation'] = observations
-        # print('Observation [heading2Goal, distance2Goal]:',observations)
+        print('Observation [x,y, yaw]:',observations)
         #print ('goal positions:', self.goal_x, self.goal_y)
         return observations, done
 
     def step(self, action):
         
         linear = action[0]
-        if linear < 0:
-            linear = 0 #no negative velocity
+        #if linear < 0:
+        #    linear = 0 #no negative velocity
         angular = action[1]
         #step
         vel_cmd = Twist()
@@ -179,12 +180,16 @@ class Env():
             batch_mode = True
 
 
-        headings = self.headings
+        headings = self.heading
         #yaw_rewards = []
-        current_distance = observations [:,1]
+        current_distance =  observations [:,0] + observations [:,1]
+       
+        current_yaws = observations[:,2]
+        
         self.reward_dict = {}
 
         distance_rate = -(2 ** (current_distance / self.goal_distance)) #reward for distance to goal
+        #print("distance rate:",distance_rate )
         if (self.usedAMCL):
             local_distance_rate = -(2 ** (current_distance / self.local_distance))
             self.reward_dict['local distance reward'] = local_distance_rate
@@ -203,14 +208,7 @@ class Env():
         self.reward_dict['distance reward'] = distance_rate
         
         self.reward_dict['angular reward'] = angular_reward
-        # if current_distance:# batch mode, wont work
-        #     self.get_goalbox = True
-        #     rospy.loginfo("Goal!!")
-        #     self.reward_dict['distance reward']  = 1000
-        #     self.pub_cmd_vel.publish(Twist()) # stop
-        #     self.goal_x, self.goal_y = self.respawn_goal.getPosition(True, delete=True)
-        #     self.goal_distance = self.getGoalDistace()
-        #     self.get_goalbox = False
+       
 
         self.reward_dict['r_total'] = self.reward_dict['distance reward']  + self.reward_dict['angular reward'] #+ self.reward_dict['local distance reward'] 
 

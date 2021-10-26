@@ -12,11 +12,11 @@ if __name__ == '__main__':
     all_logs = []
     init_gpu(use_gpu=True, gpu_id=0)
     """Parameters"""
-    n_iter= 100
+    n_iter= 31
     num_agent_train_steps_per_iter= 1000 #1000
-    train_batch_size = 512 ##steps used per gradient step (training) 512
+    train_batch_size = 512 ##agent steps used per gradient step (training) 512
     action_size = 2 
-    observation_size = 2 # heading, current distance
+    observation_size = 3 # x,y yaw
 
     """Env, agent objects initialization"""
     env = Env(action_size) 
@@ -26,17 +26,17 @@ if __name__ == '__main__':
     #collect paths using policy for learning   
    
     for itr in tqdm(range(n_iter)):
-        if itr % 1 == 0:
-            print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 800
+    
+        print("\n\n********** Iteration %i ************"%itr)
+        use_batchsize = 5000 #8000
         if itr==0:
-            use_batchsize = 2000 #(random) steps collected on 1st iteration (put into replay buffer) 2000
+            use_batchsize = 10000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
 
 
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
                                             min_timestep_perbatch = use_batchsize , max_path_length= 200)
-        agent.add_to_replay_buffer(paths, add_sl_noise= True)
+        agent.add_to_replay_buffer(paths, add_sl_noise = True)
         
         ###START TRAINING 
         env.pause()
@@ -44,18 +44,14 @@ if __name__ == '__main__':
         for train_step in range(num_agent_train_steps_per_iter):  
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
-            # with open(agent.resultPATH, 'a') as f:
-            # # create the csv writer
-            #     writer = csv.writer(f)
-            #     # write a row to the csv file
-            #     writer.writerow(train_log)
-            # f.close()
             all_logs.append(train_log) 
-        
-        #Saving model and save validation every 10 iteration
-        if (itr % 10 == 0) and (itr != 0):    
+            
+        if (itr % 10 == 0) and (itr != 0):   
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
             print ('Saved model at iteration', str(itr))
+        #Saving model and save validation every 5 iteration
+        if (itr % 5 == 0):    
+           
             # validation
             fig = plt.figure()
             env.unpause()
@@ -65,25 +61,24 @@ if __name__ == '__main__':
             print(action_sequence)
             mpe, true_states, pred_states = calculate_mean_prediction_error(env, action_sequence, agent.dyn_models, agent.actor.data_statistics)
             for i in range(agent.dyn_models[0].ob_dim):
-                plt.subplot(agent.dyn_models[0].ob_dim/2, 2, i+1)
+                plt.subplot(1, 3, i+1)
                 plt.plot(true_states["observation"][:,i], 'g', label='Ground Truth')
                 plt.plot(pred_states[:,i], 'r', label='Predicted State')
                 plt.xlabel('Horizon')
-            plt.ylabel('State')
-            plt.legend()
+                plt.ylabel('State')
+                plt.legend()
             fig.suptitle('Mean Prediction Error: ' + str(mpe))
-            fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')
+            fig.savefig(agent.figPATH+'/itr_'+str(itr)+'_predictions.png', dpi=500, bbox_inches='tight')           
+            # Print losses
+            all_losses = np.array([log for log in all_logs])
+            np.save(agent.resultPATH +'/itr_'+str(itr)+'_losses.npy', all_losses)
+            fig.clf()
+            plt.plot(all_losses)
+            fig.savefig(agent.resultPATH+'/itr_'+str(itr)+'_losses.png', dpi=500, bbox_inches='tight')
         env.unpause()
 
         
     
-    env.reset()               
-    # Print losses
-    all_losses = np.array([log for log in all_logs])
-    np.save(agent.resultPATH +'/itr_'+str(itr)+'_losses.npy', all_losses)
-    fig.clf()
-    plt.plot(all_losses)
-    fig.savefig(agent.resultPATH+'/itr_'+str(itr)+'_losses.png', dpi=500, bbox_inches='tight')
 
 
 

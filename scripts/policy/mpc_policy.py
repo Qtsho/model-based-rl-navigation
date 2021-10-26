@@ -19,22 +19,22 @@ class MPCPolicy():
         self.N = N
         self.data_statistics = None  
 
-        self.ob_dim = self.env.observation_space[0]
+        self.ob_dim = self.dyn_models[0].ob_dim
 
         # action space
         self.ac_space = self.env.action_space
         self.ac_dim = ac_dim
         # self.low = self.ac_space.low # min action
         # self.high = self.ac_space.high #max action
-        self.low = -0.2 # m/s,angular/s
-        self.high = 0.2# m/s, angular/s
+        self.low = -0.1 # m/s,angular/s
+        self.high = 0.1# m/s, angular/s
     
     def sample_action_sequences(self, num_sequences, horizon): 
         #  uniformly sample trajectories and return an array of
         # dimensions (num_sequences, horizon, self.ac_dim) in the range
         # [self.low, self.high] # TODO RANDOM Shooting
         random_action_sequences = np.random.uniform(self.low, self.high, (num_sequences, horizon, self.ac_dim))
-        #random_action_sequences = round(random_action_sequences,1) limit the action space
+        random_action_sequences = np.around(random_action_sequences, 2) #limit the action space
         return random_action_sequences
 
     def get_action(self, obs):
