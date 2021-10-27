@@ -2,9 +2,9 @@
 
 A model based RL approach for robot navigation.
 ## Table of contents
-* [General Info] (#general-info)
-* [Technologies] (#technologies)
-* [Setup] (#setup)
+* [General Info](#general-info)
+* [Technologies](#technologies)
+* [Setup](#setup)
 
 ## General Info
 
@@ -19,6 +19,7 @@ Project is created with:
 * ROS Melodic
 
 ## Setup
+In other to start trainning, it is reccommended to have a GPU. As we want to boost the simulation faster with constant rate.
 
 To run this project we need: 
 Dependencies:
@@ -30,6 +31,6 @@ Prequisitive:
   
 run: 
 
-1/ the navigation rl environment :turtlebot stage 4 with reduced laser to 24 readings
+1/ the navigation rl environment: turtlebot3 simulation, preferably stage 4
 
 2/ rosrun rl_move_base turtlebot3_mbrl.py
