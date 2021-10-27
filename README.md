@@ -8,7 +8,9 @@ A model based RL approach for robot navigation.
 
 ## General Info
 
-Abstract
+This implemented the MBRL algorithms in paper for robot navigation: Neural Network Dynamics for Model-Based Deep Reinforcement Learning with Model-Free Fine-Tuning, Anusha Nagabandi, Gregory Kahn, Ronald S. Fearing, Sergey Levine:
+
+https://arxiv.org/abs/1708.02596
 
 
 ## Technologies
