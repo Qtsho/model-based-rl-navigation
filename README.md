@@ -8,9 +8,11 @@ A model based RL approach for robot navigation.
 
 ## General Info
 
-This implemented the MBRL algorithms in paper for robot navigation: Neural Network Dynamics for Model-Based Deep Reinforcement Learning with Model-Free Fine-Tuning, Anusha Nagabandi, Gregory Kahn, Ronald S. Fearing, Sergey Levine:
+This implemented the MBRL algorithms in paper for robot navigation: Neural Network Dynamics for Model-Based Deep Reinforcement Learning with Model-Free Fine-Tuning, Anusha Nagabandi, Gregory Kahn, Ronald S. Fearing, Sergey Levine
 
 https://arxiv.org/abs/1708.02596
+
+
 
 
 ## Technologies
@@ -34,5 +36,9 @@ Prequisitive:
 run: 
 
 1/ the navigation rl environment: turtlebot3 simulation, preferably stage 4
+$ roslaunch turtlebot3_simulation turtlebot3_stage_$
 
-2/ rosrun rl_move_base turtlebot3_mbrl.py
+
+2/ run the MBRL implemetation
+
+$ rosrun rl_move_base turtlebot3_mbrl.py
