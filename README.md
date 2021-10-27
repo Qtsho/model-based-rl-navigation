@@ -36,9 +36,11 @@ Prequisitive:
 run: 
 
 1/ the navigation rl environment: turtlebot3 simulation, preferably stage 4
+```
 $ roslaunch turtlebot3_simulation turtlebot3_stage_$
-
+```
 
 2/ run the MBRL implemetation
-
+```
 $ rosrun rl_move_base turtlebot3_mbrl.py
+```
