@@ -33,6 +33,10 @@ Prequisitive:
   Turtlebot 3 simulation
   Navigation stack for turtlebot
   
+ Branch:
+* refractor: code cleannig
+* arws: run on workstation
+ 
 run: 
 
 1/ the navigation rl environment: turtlebot3 simulation, preferably stage 4
