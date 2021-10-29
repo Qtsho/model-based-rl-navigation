@@ -26,22 +26,29 @@ class MPCPolicy():
         self.ac_dim = ac_dim
         # self.low = self.ac_space.low # min action
         # self.high = self.ac_space.high #max action
-        self.low = -0.1 # m/s,angular/s
-        self.high = 0.1# m/s, angular/s
+        self.low = -1 # m/s,angular/s
+        self.high = 1 # m/s, angular/s
+        self.minLinear = 0.1
+        self.maxLinear = 0.5
     
     def sample_action_sequences(self, num_sequences, horizon): 
         #  uniformly sample trajectories and return an array of
         # dimensions (num_sequences, horizon, self.ac_dim) in the range
         # [self.low, self.high] # TODO RANDOM Shooting
         random_action_sequences = np.random.uniform(self.low, self.high, (num_sequences, horizon, self.ac_dim))
-        random_action_sequences = np.around(random_action_sequences, 2) #limit the action space
+        random_action_sequences = np.around(random_action_sequences, 1) #limit the action space
         return random_action_sequences
 
     def get_action(self, obs):
 
         if self.data_statistics is None:
-            print("WARNING: performing random actions.",self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]) #(low, high, size), still MPC but random
-            return self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]
+            random_action = self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]# first sequence, first action
+            if (random_action[0]< self.minLinear): #no negative velocity
+                random_action[0] = self.minLinear
+            if (random_action[1]> self.maxLinear): #no negative velocity
+                random_action[1] = self.maxLinear
+            print("WARNING: performing random actions.", random_action) #(low, high, size), still MPC but random
+            return random_action
 
         # sample random actions (N x horizon)
         candidate_action_sequences = self.sample_action_sequences(num_sequences=self.N, horizon=self.horizon)
@@ -63,7 +70,11 @@ class MPCPolicy():
         action_to_take = best_action_sequence[0] # first index of the best action sequence
         
         #print ('most optimize actions: ', action_to_take )
-        return action_to_take  # Unsqueeze the first index? do we need unsqeezing= adding 1 dim
+        if (action_to_take[0]<self.minLinear): #no negative velocity
+            action_to_take[0] = self.minLinear
+        if (action_to_take[1]> self.maxLinear): #no negative velocity
+            action_to_take[1] = self.maxLinear
+        return action_to_take  
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model):
         """

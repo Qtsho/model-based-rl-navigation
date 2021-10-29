@@ -68,8 +68,9 @@ def Path(
 def calculate_mean_prediction_error(env, action_sequence, models, data_statistics):
     model = models[0]
     # true
-    ob = env.reset()
     obs, acs, rewards, next_obs, terminals = [], [], [], [], []
+    ob = env.reset()
+ 
     steps = 0
     for ac in action_sequence:
         obs.append(ob)
@@ -93,6 +94,8 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
     pred_states = []
     #H steps prediction
     for ac in action_sequence:
+        if len(pred_states) >= steps:
+            break
         pred_states.append(ob)
         action = np.expand_dims(ac,0)
         ob = model.get_prediction(ob, action, data_statistics)
@@ -104,10 +107,9 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
     return mpe, true_states, pred_states
 
 def sample_trajectory(env, policy, max_path_length):
-    '''This wont use render mode-> no imgs_obs'''
     print("sample trajectory until crash or reach max path length")
-    ob = env.reset()
     obs, acs, rewards, next_obs, terminals  = [], [], [], [], []
+    ob = env.reset()
     steps = 0
     start = 0
     freq = 0.08 #control frequency
@@ -118,12 +120,21 @@ def sample_trajectory(env, policy, max_path_length):
         sync_time = time.time()
         print('Time between two steps: ', sync_time-start)
         start = time.time()
-
+        #TODO Print missing control frequency
+        
+        
         obs.append(ob)
         ac = policy.get_action(ob) # this take the most time
         acs.append(ac)
         ob, rew, done, _ = env.step(ac)
-       
+        
+        #sync the simulation??deving
+        # t1 = time.time()
+        # t2=time.time()
+        # while (t2 - t1) < 0.1: # sync the sim to 0.1*rtf
+        #     t2 = time.time()
+        # env.pause()
+        
         # add the observation after taking a step to next_obs
         next_obs.append(ob)
         rewards.append(rew)

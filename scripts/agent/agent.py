@@ -14,29 +14,31 @@ class ReinforceAgent():
         #T: ensemble, create multiple dynamics NN
         self.env = env
         self.dyn_models = []
-        self.load_iteration = 0
-        self.load_model = False 
+        self.load_iteration = 30
+        self.load_model = True 
 
         
-        for _ in range(self.ensemble_size):
-            model = FFModel(
-                action_size,
-                state_size,
-                n_layers = 3,
-                size  = 256, #: dimension of each hidden layer
-                learning_rate = 0.00025, 
-            )
-            self.dyn_models.append(model) # T: create dyn models and append object to list
+      
             
         if self.load_model:
             for _ in range(self.ensemble_size):
-                model = T.load(self.modelPATH +'/itr_'+ str(self.load_iteration) + '.pt',map_location ='cpu')
-                
-                self.model.device = device
-                self.model.eval()
-                print ("Load model state dict: ", self.model.state_dict())
+                model = T.load(self.modelPATH +'itr_'+ str(self.load_iteration) + '.pt')
+                model.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+                model.eval()
+                #print ("Load model state dict: ", self.model.state_dict())
                 self.dyn_models.append(model)
             print ("Load model state dict: ", self.dyn_models[0].state_dict())
+        else:
+            for _ in range(self.ensemble_size):
+                model = FFModel(
+                action_size,
+                state_size,
+                n_layers = 6,
+                size  = 256, #: dimension of each hidden layer
+                learning_rate = 0.00025, 
+                )
+            self.dyn_models.append(model) # T: create dyn models and append object to list
+            
 
         self.actor = MPCPolicy(
             self.env,

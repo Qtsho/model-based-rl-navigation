@@ -144,10 +144,7 @@ class Env():
         return observations, done
 
     def step(self, action):
-        
         linear = action[0]
-        #if linear < 0:
-        #    linear = 0 #no negative velocity
         angular = action[1]
         #step
         vel_cmd = Twist()
@@ -224,13 +221,13 @@ class Env():
         except (rospy.ServiceException) as e:
             print("gazebo/reset_world service call failed")
 
-        data = None
-        while data is None:
-            try:
-                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
-            except:
-                print ("Error while waiting laser message!")
-                pass
+        # data = None
+        # while data is None:
+        #     try:
+        #         data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+        #     except:
+        #         print ("Error while waiting laser message!")
+        #         pass
 
         if self.initGoal:
             self.goal_x, self.goal_y = self.respawn_goal.getPosition()

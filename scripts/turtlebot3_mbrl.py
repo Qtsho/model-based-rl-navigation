@@ -21,19 +21,18 @@ if __name__ == '__main__':
     """Env, agent objects initialization"""
     env = Env(action_size) 
     agent = ReinforceAgent(env ,action_size, observation_size)
- 
+    if (agent.load_iteration> 0):
+        n_iter+= agent.load_iteration
     #Training loop:
     #collect paths using policy for learning   
-   
-    for itr in tqdm(range(n_iter)):
     
+    for itr in tqdm(range(agent.load_iteration, n_iter)):
+        
         print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 5000 #8000
+        use_batchsize = 3000 #8000
         if itr==0:
-            use_batchsize = 10000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
+            use_batchsize = 8000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
-
-
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
                                             min_timestep_perbatch = use_batchsize , max_path_length= 200)
         agent.add_to_replay_buffer(paths, add_sl_noise = True)
