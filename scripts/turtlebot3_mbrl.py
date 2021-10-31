@@ -44,7 +44,6 @@ if __name__ == '__main__':
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             all_logs.append(train_log) 
-            
         if (itr % 10 == 0) and (itr != 0):   
             #save model
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
