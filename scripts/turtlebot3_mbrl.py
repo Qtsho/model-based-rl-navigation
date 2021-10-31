@@ -29,9 +29,9 @@ if __name__ == '__main__':
     for itr in tqdm(range(agent.load_iteration, n_iter)):
         
         print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 3000 #8000
-        if itr==0:
-            use_batchsize = 8000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
+        use_batchsize = 20 #8000
+        if itr == agent.load_iteration:
+            use_batchsize = 20 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
                                             min_timestep_perbatch = use_batchsize , max_path_length= 200)
@@ -46,11 +46,14 @@ if __name__ == '__main__':
             all_logs.append(train_log) 
             
         if (itr % 10 == 0) and (itr != 0):   
+            #save model
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
             print ('Saved model at iteration', str(itr))
+            #save datastatistics
+            with open(agent.statisticsPath +'/itr_'+ str(agent.load_iteration), 'w') as f: 
+                json.dump(agent.data_statistics, f)
         #Saving model and save validation every 5 iteration
-        if (itr % 5 == 0):    
-           
+        if (itr % 10 == 0):    
             # validation
             fig = plt.figure()
             env.unpause()

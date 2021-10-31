@@ -3,24 +3,34 @@ from helpers.utils import *
 from model.NN import FFModel
 from policy.mpc_policy import MPCPolicy
 
+
 class ReinforceAgent():
     def __init__(self, env, action_size, state_size):
         self.Path = os.path.dirname(os.path.realpath(__file__))
-        self.resultPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result')
+        self.resultPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/loss')
         self.modelPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/models/model_')
         self.figPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/figures')
+        self.statisticsPath =  self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/statistics')
         self.ensemble_size = 1
         
         #T: ensemble, create multiple dynamics NN
         self.env = env
         self.dyn_models = []
-        self.load_iteration = 30
-        self.load_model = True 
-
+        self.load_iteration = 0
         
-      
+        if(self.load_iteration > 0):
+            self.load_model = True
+        else:
+            self.load_model=False
             
         if self.load_model:
+            #load data statistics
+            with open(self.statisticsPath +'/itr_'+ str(self.load_iteration), 'r') as f:
+                self.data_statistics = json.load(f)
+            #sync data with actor
+            self.actor.data_statistics = self.data_statistics
+            print('Load data statistics: ',  self.data_statistics)
+            #load NN
             for _ in range(self.ensemble_size):
                 model = T.load(self.modelPATH +'itr_'+ str(self.load_iteration) + '.pt')
                 model.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -94,9 +104,11 @@ class ReinforceAgent():
             'delta_std': np.std(
                 self.replay_buffer.next_obs - self.replay_buffer.obs, axis=0),
         }
+       
 
         # update the actor's data_statistics too, so actor.get_action can be calculated correctly
         self.actor.data_statistics = self.data_statistics
+        #print('Data statistics: ',  self.data_statistics )
 
 
     #funtion Path that return an object PathDict
