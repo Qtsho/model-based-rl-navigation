@@ -12,6 +12,7 @@ class ReinforceAgent():
         self.figPATH = self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/figures')
         self.statisticsPath =  self.Path.replace('rl_move_base/scripts/agent', 'rl_move_base/scripts/result/statistics')
         self.ensemble_size = 1
+        self.data_statistics= 0
         
         #T: ensemble, create multiple dynamics NN
         self.env = env
@@ -55,7 +56,9 @@ class ReinforceAgent():
             horizon = 1, #mpc_horizon
             N = 1, #mpc_num_action_sequences
         ) 
-        self.actor.data_statistics = self.data_statistics
+        if(self.load_iteration > 0): # only load the actor data when have data_statistics
+            self.actor.data_statistics = self.data_statistics
+        
         
         self.replay_buffer = ReplayBuffer()
     

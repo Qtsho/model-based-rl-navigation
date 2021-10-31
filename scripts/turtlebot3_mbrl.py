@@ -30,7 +30,7 @@ if __name__ == '__main__':
         
         print("\n\n********** Iteration %i ************"%itr)
         use_batchsize = 8000 #8000
-        if itr == agent.load_iteration:
+        if itr == 0:
             use_batchsize = 20000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
