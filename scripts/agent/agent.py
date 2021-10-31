@@ -27,7 +27,6 @@ class ReinforceAgent():
             #load data statistics
             self.data_statistics= load_obj(self.statisticsPath +'/itr_'+ str(self.load_iteration))
             #sync data with actor
-            self.actor.data_statistics = self.data_statistics
             print('Load data statistics: ',  self.data_statistics)
             #load NN
             for _ in range(self.ensemble_size):
@@ -56,6 +55,7 @@ class ReinforceAgent():
             horizon = 1, #mpc_horizon
             N = 1, #mpc_num_action_sequences
         ) 
+        self.actor.data_statistics = self.data_statistics
         
         self.replay_buffer = ReplayBuffer()
     
