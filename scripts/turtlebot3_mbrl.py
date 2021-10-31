@@ -49,9 +49,9 @@ if __name__ == '__main__':
             #save model
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
             print ('Saved model at iteration', str(itr))
-            #save datastatistics
-            with open(agent.statisticsPath +'/itr_'+ str(agent.load_iteration), 'w') as f: 
-                json.dump(agent.data_statistics, f)
+            #save data statistics
+            save_obj(agent.data_statistics, agent.statisticsPath +'/itr_'+ str(itr))
+    
         #Saving model and save validation every 5 iteration
         if (itr % 10 == 0):    
             # validation

@@ -25,8 +25,7 @@ class ReinforceAgent():
             
         if self.load_model:
             #load data statistics
-            with open(self.statisticsPath +'/itr_'+ str(self.load_iteration), 'r') as f:
-                self.data_statistics = json.load(f)
+            self.data_statistics= load_obj(self.statisticsPath +'/itr_'+ str(self.load_iteration))
             #sync data with actor
             self.actor.data_statistics = self.data_statistics
             print('Load data statistics: ',  self.data_statistics)

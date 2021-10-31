@@ -19,6 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import json
+import pickle
 
 
 import matplotlib.pyplot as plt
@@ -295,3 +296,11 @@ def normalize(data, mean, std, eps=1e-8):
 def unnormalize(data, mean, std):
     return data*std+mean
 
+
+def save_obj(obj, path):
+    with open(path + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(path):
+    with open(path + '.pkl', 'rb') as f:
+        return pickle.load(f)
