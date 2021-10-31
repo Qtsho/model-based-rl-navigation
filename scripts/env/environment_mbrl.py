@@ -139,7 +139,7 @@ class Env():
             observations = np.array([self.yaw, self.local_distance])
 
         self.obs_dict['observation'] = observations
-        print('Observation [x,y, yaw]:',observations)
+        #print('Observation [x,y, yaw]:',observations)
         #print ('goal positions:', self.goal_x, self.goal_y)
         return observations, done
 

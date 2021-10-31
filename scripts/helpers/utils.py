@@ -18,6 +18,8 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import json
+import pickle
 
 
 import matplotlib.pyplot as plt
@@ -47,6 +49,7 @@ class PathDict(TypedDict):
     action: np.ndarray
     next_observation: np.ndarray
     terminal: np.ndarray
+    
 def Path(
     obs: List[np.ndarray],
     acs: List[np.ndarray],
@@ -70,9 +73,16 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
     # true
     obs, acs, rewards, next_obs, terminals = [], [], [], [], []
     ob = env.reset()
- 
+    start = 0
+    freq = 0.08 #control frequency
     steps = 0
     for ac in action_sequence:
+        end = time.time()
+        while (end - start) < freq: # sync the loop to 1s
+            end = time.time()
+        sync_time = time.time()
+        #print('Time between two steps: ', sync_time-start)
+        start = time.time()
         obs.append(ob)
         acs.append(ac)
         ob, rew, done, _ = env.step(ac)
@@ -100,7 +110,6 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
         action = np.expand_dims(ac,0)
         ob = model.get_prediction(ob, action, data_statistics)
     pred_states = np.squeeze(pred_states)
-
     # mpe
     mpe = np.mean((pred_states- true_states["observation"])**2)
 
@@ -287,3 +296,11 @@ def normalize(data, mean, std, eps=1e-8):
 def unnormalize(data, mean, std):
     return data*std+mean
 
+
+def save_obj(obj, path):
+    with open(path + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(path):
+    with open(path + '.pkl', 'rb') as f:
+        return pickle.load(f)

@@ -29,9 +29,9 @@ if __name__ == '__main__':
     for itr in tqdm(range(agent.load_iteration, n_iter)):
         
         print("\n\n********** Iteration %i ************"%itr)
-        use_batchsize = 3000 #8000
-        if itr==0:
-            use_batchsize = 8000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
+        use_batchsize = 8000 #8000
+        if itr == 0:
+            use_batchsize = 20000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
         #TODO: store training trajectories in pickle file: Pkl
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
                                             min_timestep_perbatch = use_batchsize , max_path_length= 200)
@@ -44,20 +44,21 @@ if __name__ == '__main__':
             ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = agent.sample(train_batch_size)
             train_log = agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             all_logs.append(train_log) 
-            
         if (itr % 10 == 0) and (itr != 0):   
+            #save model
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
             print ('Saved model at iteration', str(itr))
+            #save data statistics
+            save_obj(agent.data_statistics, agent.statisticsPath +'/itr_'+ str(itr))
+    
         #Saving model and save validation every 5 iteration
-        if (itr % 5 == 0):    
-           
+        if (itr % 10 == 0):    
             # validation
             fig = plt.figure()
             env.unpause()
             print ("Collect data to validate...")
             action_sequence = agent.actor.sample_action_sequences(num_sequences=1, horizon=20) 
             action_sequence = action_sequence[0]
-            print(action_sequence)
             mpe, true_states, pred_states = calculate_mean_prediction_error(env, action_sequence, agent.dyn_models, agent.actor.data_statistics)
             for i in range(agent.dyn_models[0].ob_dim):
                 plt.subplot(1, 3, i+1)
