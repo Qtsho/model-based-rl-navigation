@@ -50,9 +50,8 @@ if __name__ == '__main__':
             print ('Saved model at iteration', str(itr))
             #save data statistics
             save_obj(agent.data_statistics, agent.statisticsPath +'/itr_'+ str(itr))
-    
         #Saving model and save validation every 5 iteration
-        if (itr % 10 == 0):    
+        elif (itr % 10 == 0):    
             # validation
             fig = plt.figure()
             env.unpause()

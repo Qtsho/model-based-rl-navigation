@@ -37,16 +37,20 @@ class MPCPolicy():
         # [self.low, self.high] # TODO RANDOM Shooting
         random_action_sequences = np.random.uniform(self.low, self.high, (num_sequences, horizon, self.ac_dim))
         random_action_sequences = np.around(random_action_sequences, 1) #limit the action space
+        
+        with np.nditer(random_action_sequences[:,:,0], op_flags=['readwrite']) as it:
+            for action in it:
+                if (action[...]< self.minLinear): #no negative velocity
+                    action[...] = self.minLinear
+                if (action[...]> self.maxLinear): #no negative velocity
+                    action[...] = self.maxLinear
+        
         return random_action_sequences
 
     def get_action(self, obs):
 
         if self.data_statistics is None:
             random_action = self.sample_action_sequences(num_sequences=1, horizon=1)[0][0]# first sequence, first action
-            if (random_action[0]< self.minLinear): #no negative velocity
-                random_action[0] = self.minLinear
-            if (random_action[1]> self.maxLinear): #no negative velocity
-                random_action[1] = self.maxLinear
             print("WARNING: performing random actions.", random_action) #(low, high, size), still MPC but random
             return random_action
 
@@ -70,10 +74,6 @@ class MPCPolicy():
         action_to_take = best_action_sequence[0] # first index of the best action sequence
         
         #print ('most optimize actions: ', action_to_take )
-        if (action_to_take[0]<self.minLinear): #no negative velocity
-            action_to_take[0] = self.minLinear
-        if (action_to_take[1]> self.maxLinear): #no negative velocity
-            action_to_take[1] = self.maxLinear
         return action_to_take  
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model):
