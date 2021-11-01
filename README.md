@@ -38,6 +38,7 @@ Prequisitive:
 * arws: run on workstation
 
 Rename the package folder to rl_move_base to match with package.xml
+
 You have to rename the PATH names in agent.py to match your real path
 
 run: 
