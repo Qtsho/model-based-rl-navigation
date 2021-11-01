@@ -17,7 +17,7 @@ class ReinforceAgent():
         #T: ensemble, create multiple dynamics NN
         self.env = env
         self.dyn_models = []
-        self.load_iteration = 0
+        self.load_iteration = 30
         
         if(self.load_iteration > 0):
             self.load_model = True
