@@ -36,7 +36,9 @@ Prequisitive:
  Branch:
 * refractor: code cleannig
 * arws: run on workstation
- 
+
+Rename the package folder to rl_move_base to match with package.xml
+
 run: 
 
 1/ the navigation rl environment: turtlebot3 simulation, preferably stage 4
