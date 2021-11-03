@@ -22,8 +22,7 @@ class ReinforceAgent():
         if(self.load_iteration > 0):
             self.load_model = True
         else:
-            self.load_model=False
-            
+            self.load_model=False          
         if self.load_model:
             #load data statistics
             self.data_statistics= load_obj(self.statisticsPath +'/itr_'+ str(self.load_iteration))
@@ -47,8 +46,7 @@ class ReinforceAgent():
                 learning_rate = 0.00025, 
                 )
             self.dyn_models.append(model) # T: create dyn models and append object to list
-            
-
+        
         self.actor = MPCPolicy(
             self.env,
             ac_dim= 2,#(v,w)
@@ -58,8 +56,7 @@ class ReinforceAgent():
         ) 
         if(self.load_iteration > 0): # only load the actor data when have data_statistics
             self.actor.data_statistics = self.data_statistics
-        
-        
+
         self.replay_buffer = ReplayBuffer()
     
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):

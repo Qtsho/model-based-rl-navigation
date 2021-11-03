@@ -12,7 +12,7 @@ if __name__ == '__main__':
     all_logs = []
     init_gpu(use_gpu=True, gpu_id=0)
     """Parameters"""
-    n_iter= 31
+    n_iter= 100
     num_agent_train_steps_per_iter= 1000 #1000
     train_batch_size = 512 ##agent steps used per gradient step (training) 512
     action_size = 2 
@@ -21,6 +21,7 @@ if __name__ == '__main__':
     """Env, agent objects initialization"""
     env = Env(action_size) 
     agent = ReinforceAgent(env ,action_size, observation_size)
+    
     if (agent.load_iteration> 0):
         n_iter+= agent.load_iteration
     #Training loop:
@@ -51,7 +52,7 @@ if __name__ == '__main__':
             #save data statistics
             save_obj(agent.data_statistics, agent.statisticsPath +'/itr_'+ str(itr))
         #Saving model and save validation every 5 iteration
-        elif (itr % 10 == 0):    
+        if (itr % 10 == 0):    
             # validation
             fig = plt.figure()
             env.unpause()

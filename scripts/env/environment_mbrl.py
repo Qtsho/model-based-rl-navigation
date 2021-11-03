@@ -108,7 +108,6 @@ class Env():
             except:
                 print ("Error while waiting laser message!")
                 pass
-    
         done = 0
         scan_range = []
         for i in range(len(data.ranges)):
@@ -122,6 +121,10 @@ class Env():
         if self.min_range_to_collision > min(scan_range) > 0: #obstacle
             done = 1
             print('Reset because of collision')
+            vel_cmd = Twist()
+            vel_cmd.linear.x = 0
+            vel_cmd.angular.z = 0
+            self.pub_cmd_vel.publish(vel_cmd)
 
 
         current_distance  = self.getGoalDistace(self.goal_x,self.goal_y)
