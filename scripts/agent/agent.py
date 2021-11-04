@@ -36,6 +36,7 @@ class ReinforceAgent():
                 #print ("Load model state dict: ", self.model.state_dict())
                 self.dyn_models.append(model)
             print ("Load model state dict: ", self.dyn_models[0].state_dict())
+            
         else:
             for _ in range(self.ensemble_size):
                 model = FFModel(
