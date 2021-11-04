@@ -81,7 +81,7 @@ def calculate_mean_prediction_error(env, action_sequence, models, data_statistic
         while (end - start) < freq: # sync the loop to 1s
             end = time.time()
         sync_time = time.time()
-        #print('Time between two steps: ', sync_time-start)
+        print('Time between two steps: ', sync_time-start)
         start = time.time()
         obs.append(ob)
         acs.append(ac)

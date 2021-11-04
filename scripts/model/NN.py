@@ -68,7 +68,6 @@ class FFModel(nn.Module):
             2. `delta_pred_normalized` which is the normalized (i.e. not
                 unnormalized) output of the delta network. This is needed
         """
-        # normalize input data to mean 0, std 1
         obs_normalized = normalize (obs_unnormalized, obs_mean, obs_std)
         acs_normalized = normalize (acs_unnormalized, acs_mean,acs_std)
         
