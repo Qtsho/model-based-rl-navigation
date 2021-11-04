@@ -19,7 +19,7 @@ class ReinforceAgent():
         #T: ensemble, create multiple dynamics NN
         self.env = env
         self.dyn_models = []
-        self.load_iteration = 0
+        self.load_iteration = 20
         
         if(self.load_iteration > 0):
             self.load_model = True
@@ -28,7 +28,7 @@ class ReinforceAgent():
             
             
         if self.load_model:
-            #load replay buffer
+            #load replay buffergit hi
             self.replay_buffer= load_obj(self.bufferPath +'/itr_'+ str(self.load_iteration))
             print('Load replay buffer of size ',  self.replay_buffer.acs.size)
             #load NN
@@ -65,7 +65,8 @@ class ReinforceAgent():
         #     self.actor.data_statistics = self.data_statistics
 
         
-    
+    def test():
+         print ("Hello")
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
 
         # training a MB agent refers to updating the predictive model using observed state transitions
