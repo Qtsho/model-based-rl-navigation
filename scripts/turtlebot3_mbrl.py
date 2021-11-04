@@ -33,7 +33,7 @@ if __name__ == '__main__':
         use_batchsize = 8000 #8000
         if itr == 0:
             use_batchsize = 20000 #(random) steps collected on 1st iteration (put into replay buffer) 20000
-        #TODO: store training trajectories in pickle file: Pkl
+       
         paths, envsteps_this_batch = sample_trajectories(env, agent.actor,  
                                             min_timestep_perbatch = use_batchsize , max_path_length= 200)
         agent.add_to_replay_buffer(paths, add_sl_noise = True)
@@ -50,7 +50,7 @@ if __name__ == '__main__':
             T.save(agent.dyn_models[0], agent.modelPATH +'itr_' +str(itr) +'.pt')
             print ('Saved model at iteration', str(itr))
             #save data statistics
-            save_obj(agent.data_statistics, agent.statisticsPath +'/itr_'+ str(itr))
+            save_obj(agent.replay_buffer, agent.bufferPath +'/itr_'+ str(itr))
         #Saving model and save validation every 5 iteration
         if (itr % 10 == 0):    
             # validation
