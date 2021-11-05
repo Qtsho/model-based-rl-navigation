@@ -26,7 +26,6 @@ Project is created with:
 
 ![image](https://user-images.githubusercontent.com/37075262/140490319-3b7a85f4-a7e4-46c1-83a3-b49f4d0b2511.png)
 
-![image](https://user-images.githubusercontent.com/37075262/140488759-ef9c4c35-7800-4687-921e-4bdf6858a9d1.png)
 
 In other to start trainning, it is reccommended to have a GPU. As we want to boost the simulation faster with constant rate.
 
@@ -52,6 +51,9 @@ run:
 ```
 $ roslaunch turtlebot3_simulation turtlebot3_stage_$
 ```
+
+
+![image](https://user-images.githubusercontent.com/37075262/140488759-ef9c4c35-7800-4687-921e-4bdf6858a9d1.png)
 
 2/ run the MBRL implemetation
 ```
