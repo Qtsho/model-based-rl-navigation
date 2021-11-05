@@ -23,6 +23,12 @@ Project is created with:
 * ROS Melodic
 
 ## Setup
+
+![image](https://user-images.githubusercontent.com/37075262/140488836-81cca7d2-a114-4e9f-9511-1c23dfe046f9.png)
+
+
+![image](https://user-images.githubusercontent.com/37075262/140488759-ef9c4c35-7800-4687-921e-4bdf6858a9d1.png)
+
 In other to start trainning, it is reccommended to have a GPU. As we want to boost the simulation faster with constant rate.
 
 To run this project we need: 
