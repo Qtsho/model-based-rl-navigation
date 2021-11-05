@@ -24,8 +24,7 @@ Project is created with:
 
 ## Setup
 
-![image](https://user-images.githubusercontent.com/37075262/140488836-81cca7d2-a114-4e9f-9511-1c23dfe046f9.png)
-
+![image](https://user-images.githubusercontent.com/37075262/140488946-410fe892-899c-4275-a3b4-009ac3345a7b.png)
 
 ![image](https://user-images.githubusercontent.com/37075262/140488759-ef9c4c35-7800-4687-921e-4bdf6858a9d1.png)
 
